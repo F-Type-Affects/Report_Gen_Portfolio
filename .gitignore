@@ -1,0 +1,18 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*.so
+
+# Virtual environment
+vir_env/
+venv/
+
+# Environment variables file
+.env
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Other files to ignore
+*.log
