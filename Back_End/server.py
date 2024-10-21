@@ -1,6 +1,8 @@
 import logging
 import os
 from flask import Flask, redirect, request, session, jsonify
+from flask import render_template, redirect, url_for
+from flask import flash
 import requests
 import time
 
@@ -10,7 +12,7 @@ from .token_manager import save_token_data, get_valid_access_token
 from . import config
 from .ahj_manager import search_ahj_registry, perform_bing_search
 
-app = Flask(__name__)
+app = Flask(__name__,template_folder='../Front_End_Web/templates', static_folder='../Front_End_Web/static')
 
 app.config['DEBUG'] = False
 app.config['SECRET_KEY'] = config.APP_KEY  # Securely generate and store this
@@ -26,7 +28,7 @@ setup_database(DATABASE_PATH)
 
 @app.route('/')
 def home():
-    return 'Welcome to the Report Generator!'
+    return render_template('index.html')
 
 @app.route('/login')
 def login():
@@ -39,7 +41,6 @@ def login():
 
     # Get the authorization URL from the auth module
     auth_url = get_authorization_url()
-    #logger.debug(f"Redirecting to: {auth_url}")
 
     # Redirect the user to the BQE Core authorization page
     return redirect(auth_url)
@@ -95,23 +96,13 @@ def callback():
             refresh_token_expires_in=token_data.get('refresh_token_expires_in')
         )
         login_user(sub)
-        return '''
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <title> Login Successful </title>
-            <script type="text/javascript">
-            setTimeout(function() {
-                window.close();
-            }, 2000);
-            </script>
-        </head>
-        <body>
-            <h1> Login Successful! </h1>
-            <h3> you can now return to the application. </h3>
-        </body>
-        </html>
-        '''
+        
+        # Flash success message
+        flash("Login successful! You can now use the application.")
+        
+        # Redirect to the home page (index.html) with a success message
+        return redirect(url_for('home'))
+    
     except Exception as e:
         logging.error(f"Error during callback processing: {e}")
         return "An internal error occured.", 500

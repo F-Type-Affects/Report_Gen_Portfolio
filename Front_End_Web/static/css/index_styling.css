@@ -119,3 +119,26 @@ ul ul li {
     position: relative;              /* Keeps the content in its normal document flow */
     margin-left: 10px;              /* Shift the content area left (toward the sidebar) */
 }
+
+/* Flash message styling */
+.flash-message {
+    background-color: #4CAF50; /* Green background to indicate success */
+    color: white; /* White text */
+    padding: 15px; /* Padding around the text */
+    margin-bottom: 20px; /* Space below the message */
+    border-radius: 5px; /* Rounded corners */
+    text-align: center; /* Centered text */
+    font-size: 1.2rem; /* Larger font size for better visibility */
+}
+
+/* Optional: make the flash message disappear after a while */
+.flash-message {
+    position: relative;
+    animation: fadeOut 5s forwards; /* Message fades out after 10 seconds */
+}
+
+@keyframes fadeOut {
+    0% { opacity: 1; }
+    90% { opacity: 1; }
+    100% { opacity: 0; }
+}

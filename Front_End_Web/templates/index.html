@@ -10,11 +10,21 @@
     <header>
         <img src="../static/images/landing_banner.jpg" alt="Consulting Structural & Forensic Engineers" class="banner">
     </header>
+    <!-- Display Flash Messages -->
+    {% with messages = get_flashed_messages() %}
+    {% if messages %}
+    <div class="flash-message">
+        {% for message in messages %}
+        <p>{{ message }}</p>
+        {% endfor %}
+    </div>
+    {% endif %}
+    {% endwith %}
     
     <div class="container">
         <nav class="sidebar">
-            <button>Login & Authenticate</button>
-            <button>Create Project</button>
+            <button onclick="window.location.href='login'">Login & Authenticate</button>
+            <button onclick="window.location.href='/create_project">Create Project</button>
             <button>Update Project Address</button>
             <button>Fetch Project Details</button>
             <button>Find AHJ & Amendments</button>
