@@ -82,17 +82,18 @@ def execute_query(query, params=None, is_select=False):
         logger.error(f"Database error: {e} with query: {query}")
         raise
 
-def get_all_emails_and_subs():
+def get_all_emails():
     """
-    Retrieves all emails and their corresponding subs from the database
-    returns list of tuples: [(email, sub)]
+    Retrieves all emails from the database
+    Returns: list of emails
     """
-    query = "SELECT email, sub FROM tokens"
+    query = "SELECT email FROM tokens"
     result = execute_query(query, is_select=True)
     if result:
-        return result
+        return [email[0] for email in result]
     else:
         return []
+
     
 def get_sub_by_email(email):
     """

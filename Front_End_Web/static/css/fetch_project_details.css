@@ -1,0 +1,76 @@
+/* Styling for Fetch Project Details Page */
+body {
+    background-color: #f4f4f9;
+    font-family: 'Arial', sans-serif;
+    color: #333;
+    margin: 0;
+    padding: 0;
+}
+
+.container {
+    max-width: 800px;
+    margin: 50px auto;
+    padding: 20px;
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+h1 {
+    color: #007ACC;
+    text-align: center;
+    font-size: 24px;
+    margin-bottom: 20px;
+}
+
+.details-section {
+    margin-bottom: 20px;
+}
+
+.details-section h2 {
+    font-size: 18px;
+    color: #333;
+    margin-bottom: 10px;
+    border-bottom: 2px solid #007ACC;
+    padding-bottom: 5px;
+}
+
+.details-section label {
+    font-size: 14px;
+    color: #555;
+}
+
+.details-section p {
+    font-size: 16px;
+    color: #333;
+    margin: 5px 0;
+}
+
+button {
+    width: 48%;
+    padding: 12px;
+    background-color: #007ACC;
+    color: white;
+    font-size: 16px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    margin-top: 20px;
+}
+
+button:hover {
+    background-color: #005F9E;
+}
+
+button + button {
+    margin-left: 4%;
+}
+
+.back-btn {
+    background-color: #ccc;
+    color: #333;
+}
+
+.back-btn:hover {
+    background-color: #999;
+}

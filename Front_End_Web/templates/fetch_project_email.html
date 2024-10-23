@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fetch Project Details - Select Email</title>
+    <link rel="stylesheet" href="../static/css/fetch_project_email.css">
+</head>
+<body>
+    <header>
+        <h1>Select Your Email</h1>
+    </header>
+    
+    <div class="container">
+        <form action="/fetch_project_email" method="POST">
+            <label for="email">Email:</label>
+            <select id="email" name="email">
+                {% for email in emails %}
+                  <option value="{{ email }}">{{ email }}</option>
+                {% endfor %}
+              </select>              
+            
+            <button type="submit">Next</button>
+            <button type="button" onclick="window.location.href='/'">Back</button>
+        </form>
+    </div>
+</body>
+</html>

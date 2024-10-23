@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fetch Project Details - Enter Project Number</title>
+    <link rel="stylesheet" href="../static/css/fetch_project_number.css">
+
+    <script>
+        function showLoading() {
+            // Show the loading spinner/message
+            document.getElementById("loading-spinner").style.display = "block";
+        }
+    </script>
+</head>
+<body>
+    <header>
+        <h1>Enter Project Number</h1>
+    </header>
+    
+    <div class="container">
+        <form action="/fetch_project_number" method="POST" onsubmit="showLoading()">
+            <label for="project_number">Project Number:</label>
+            <input type="text" id="project_number" name="project_number" required><br><br>
+            
+            <div class="instructions">
+                <h4>Formatting Instructions</h4>
+                <p>Leading/Trailing zeros must be included in the Project ID.<br>
+                For example:</p>
+                <ul>
+                    <li>ID 1 should be 0001-17 or 24-0001</li>
+                    <li>ID 12 should be 012-17 or 24-012</li>
+                    <li>ID 319 should be 0319-17 or 24-0319</li>
+                    <li>ID 1067 should be 1067-17 or 24-1067</li>
+                </ul>
+            </div>
+
+            <button type="submit">Find Project</button>
+            <button type="button" onclick="window.location.href='/fetch_project_email'">Back</button>
+        </form>
+        <!-- Loading Spinner -->
+        <div id="loading-spinner" style="display:none;">
+            <p>Please wait, fetching project details...</p>
+            <div class="spinner"></div>
+        </div>
+    </div>
+</body>
+</html>

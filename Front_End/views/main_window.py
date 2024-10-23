@@ -135,5 +135,3 @@ class MainWindow(QMainWindow):
         self.details_widget.back_button.clicked.connect(self.project_controller.go_back_to_project_retrieval)
         self.details_widget.confirm_button.clicked.connect(self.project_controller.confirm_project)
 
-
-    # Additional methods can be added here if needed

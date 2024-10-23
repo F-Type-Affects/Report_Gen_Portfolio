@@ -7,8 +7,10 @@ import requests
 import time
 
 from .auth import get_authorization_url, exchange_code_for_token, decode_id_token, get_user_info
-from .database import setup_database
+from .database import setup_database, get_all_emails
 from .token_manager import save_token_data, get_valid_access_token
+from .project_manager import get_project_by_code, get_client_by_id
+from .models import Project, Client
 from . import config
 from .ahj_manager import search_ahj_registry, perform_bing_search
 
@@ -154,6 +156,111 @@ def get_amendments():
         return jsonify({'amendments': website_links})
     
     return jsonify({'error': 'failed to retrieve ammendments after multiple attempts'}), 500
+
+@app.route('/fetch_project_email', methods=['GET', 'POST'])
+def fetch_project_email():
+    if request.method == 'GET':
+        # Fetch emails from the database
+        emails = get_all_emails()  # Replace with actual function to get emails
+        return render_template('fetch_project_email.html', emails=emails)
+    
+    elif request.method == 'POST':
+        selected_email = request.form['email']
+        # Store the selected email in the session for later use
+        session['selected_email'] = selected_email
+        return redirect(url_for('fetch_project_number'))
+
+@app.route('/fetch_project_number', methods=['GET', 'POST'])
+def fetch_project_number():
+    if request.method == 'GET':
+        return render_template('fetch_project_number.html')
+    
+    elif request.method == 'POST':
+        selected_email = session.get('selected_email')
+        project_number = request.form['project_number']
+        # Fetch project details from the backend using selected email and project number
+        project_data = get_project_by_code(project_number, selected_email)
+        
+        if not project_data:
+            flash('Project not found. Please check the Project ID and try again.')
+            return redirect(url_for('fetch_project_number'))
+        
+        project = Project.from_dict(project_data[0])
+        client_data = get_client_by_id(project.client_id, selected_email)
+        client = Client.from_dict(client_data[0]) if client_data else None
+        
+        return render_template('fetch_project_details.html', project=project, client=client)
+
+@app.route('/confirm_project_details')
+def confirm_project_details():
+    flash('Project details confirmed and saved!')
+    return redirect(url_for('home'))
+
+@app.route('/fetch_ahj_address', methods=['GET', 'POST'])
+def fetch_ahj_address():
+    if request.method == 'GET':
+        # If project details are available, pass the address
+        project_address = None
+        if 'project' in session:
+            project = session['project']
+            project_address = f"{project['street1']}, {project['city']}, {project['state']}, {project['zip_code']}"
+        
+        # Render the fetch_ahj_address page
+        return render_template('fetch_ahj_address.html', project_address=project_address)
+    
+    elif request.method == 'POST':
+        if 'use_fetch_flow' in request.form:  # If the user wants to fetch project details
+            return redirect(url_for('fetch_project_email'))
+
+        # If user confirmed the project address or manually entered one
+        if 'project' in session:
+            address = f"{session['project']['street1']}, {session['project']['city']}, {session['project']['state']}, {session['project']['zip_code']}"
+        else:
+            address = request.form.get('address')
+        
+        # Store the address in session
+        session['address'] = address
+        return redirect(url_for('display_ahj_results'))
+
+@app.route('/find_ahj', methods=['POST'])
+def find_ahj():
+    # Logic for finding AHJ
+    address = request.form.get('address')
+
+    # Run the AHJ search
+    ahj_data = search_ahj_registry(address)
+
+    # Store the results for future use
+    session['ahj_data'] = ahj_data
+
+    return render_template('display_ahj_results.html', ahj_data=ahj_data)
+
+@app.route('/display_ahj_results', methods=['GET', 'POST'])
+def display_ahj_results():
+    # Get the address from the session
+    address = session.get('address')
+
+    if not address:
+        flash("No address found. Please go back and enter a valid address.")
+        return redirect(url_for('fetch_ahj_address'))
+
+    # Run the AHJ search
+    ahj_data = search_ahj_registry(address)
+
+    if request.method == 'POST':
+        # Store the AHJ data for export
+        session['ahj_data'] = ahj_data
+        return redirect(url_for('home'))
+
+    # Render the AHJ results
+    return render_template('display_ahj_results.html', ahj_data=ahj_data)
+
+@app.route('/store_ahj_data', methods=['POST'])
+def store_ahj_data():
+    # Store AHJ Data for export in the session
+    session['ahj_data'] = session.get('ahj_data')
+    flash("AHJ data stored for export.")
+    return redirect(url_for('home'))
 
 def login_user(sub):
     session['user_sub'] = sub  # Store the sub in session after successful login

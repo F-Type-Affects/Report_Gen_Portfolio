@@ -4,9 +4,9 @@ import json
 from urllib.parse import urlparse, quote
 import requests
 import logging
-from Back_End.token_manager import refresh_access_token, get_valid_access_token, fetch_access_token, fetch_access_token_by_email
-from Back_End.database import get_sub_by_email
-from Back_End import config
+from .token_manager import refresh_access_token, get_valid_access_token, fetch_access_token, fetch_access_token_by_email
+from .database import get_sub_by_email
+from . import config
 
 # Configure logging
 logging.basicConfig(level=logging.WARNING)

@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project Details</title>
+    <link rel="stylesheet" href="../static/css/fetch_project_details.css">
+</head>
+<body>
+    <header>
+        <h1>Project and Client Details</h1>
+    </header>
+    
+    <div class="container">
+        <h3>Project Details</h3>
+        <p>Project Name: {{ project.name }}</p>
+        <p>Purchase Order Number: {{ project.purchase_order_number }}</p>
+        <p>Billing Contact: {{ project.billing_contact }}</p>
+        
+        <h3>Client Details</h3>
+        <p>Client Name: {{ client.name }}</p>
+        
+        <h3>Project Address</h3>
+        <p>{{ project.street1 }}, {{ project.street2 }}<br>{{ project.city }}, {{ project.state }} {{ project.zip_code }}</p>
+        
+        <h3>Client Address</h3>
+        <p>{{ client.street1 }}, {{ client.street2 }}<br>{{ client.city }}, {{ client.state }} {{ client.zip_code }}</p>
+
+        <div class="button-group">
+            <button type="button" onclick="window.location.href='/fetch_project_email'">Search New Project</button>
+            <button type="button" onclick="window.location.href='/confirm_project_details'">Confirm Details</button>
+        </div>
+    </div>
+</body>
+</html>
