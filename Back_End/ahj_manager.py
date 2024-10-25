@@ -60,7 +60,7 @@ def search_ahj_registry(address):
     df = pd.DataFrame(table_data, columns=['AHJ Code', 'AHJ Name', 'County', 'Building Code', 'Electric Code', 'Fire Code', 'Residential Code', 'Wind Code', 'More Info'])
     return df.to_dict(orient='records')
 
-# Function to perform Bing search with exponential backoff and PDF filter
+# Function to perform Bing search with exponential backoff and PDF filter and regular websites
 def perform_bing_search(query, retries=5):
     bing_api_url = f"{config.BING_ENDPOINT}v7.0/search"  # Bing Search API endpoint
     api_key = config.BING_KEY  # Your Bing API key from Azure
@@ -73,51 +73,69 @@ def perform_bing_search(query, retries=5):
         "Ocp-Apim-Subscription-Key": api_key  # Bing API key
     })
 
-    # Append the PDF filetype filter to the query
-    query_with_pdf_filter = f"{query} filetype:pdf"
+    # Queries for both PDFs and websites
+    query_pdf = f"{query} filetype:pdf"
+    query_web = f"{query}"
 
-    for attempt in range(retries):
-        try:
-            logger.info(f"Attempting Bing search (Attempt {attempt + 1}) for query: {query_with_pdf_filter}")
+    pdf_results = []
+    web_results = []
 
-            # Perform the search with the query filter and PDF filetype
-            response = session.get(bing_api_url, params={"q": query_with_pdf_filter}, timeout=10)
+    # Helper function to perform the search
+    def perform_search(query_with_filter):
+        for attempt in range(retries):
+            try:
+                logger.info(f"Attempting Bing search (Attempt {attempt + 1}) for query: {query_with_filter}")
 
-            # Check if request was successful
-            if response.status_code == 200:
-                results = response.json().get('webPages', {}).get('value', [])
-                logger.info(f"Successfully retrieved {len(results)} results.")
-                
-                valid_pdf_links = []
-                for result in results:
-                    link = result.get('url', '')
-                    if link.endswith('.pdf'):
-                        valid_pdf_links.append(link)
-                    else:
-                        # make head request to check content type, include if content type valid type
-                        try:
-                            head_response = session.head(link, timeout=5)
-                            if head_response.headers.get('Content-Type') == 'application/pdf':
-                                valid_pdf_links.append(link)
-                        except requests.RequestException as e:
-                            logger.warning(f"Failed to verify content-type for {link}: {e}")
-                            
-                logger.info(f"Successfully retrieved {len(valid_pdf_links)} valid PDF links.")
-                return valid_pdf_links  # Return if successful
-                        
-            elif response.status_code == 429:  # Rate limit error code
-                logger.error(f"Rate limit hit during Bing search (Attempt {attempt + 1}).")
+                # Perform the search with the query filter
+                response = session.get(bing_api_url, params={"q": query_with_filter}, timeout=10)
+
+                # Check if request was successful
+                if response.status_code == 200:
+                    return response.json().get('webPages', {}).get('value', [])
+                elif response.status_code == 429:  # Rate limit error code
+                    logger.error(f"Rate limit hit during Bing search (Attempt {attempt + 1}).")
+                else:
+                    logger.error(f"Error during Bing search (Attempt {attempt + 1}): {response.status_code} - {response.text}")
+            except requests.RequestException as e:
+                logger.error(f"Request error during Bing search (Attempt {attempt + 1}): {e}")
+
+            # Implement exponential backoff with a cap
+            if attempt < retries - 1:  # Don't delay after the last attempt
+                nonlocal delay
+                delay = min(delay * 2, max_delay)  # Increase the delay but cap it
+                logger.info(f"Waiting {delay} seconds before retrying...")
+                time.sleep(delay)
+
+        logger.error("Failed to retrieve data after multiple attempts.")
+        return None
+
+    # Perform search for PDFs
+    pdf_results = perform_search(query_pdf)
+    if pdf_results:
+        pdf_links = []
+        for result in pdf_results:
+            link = result.get('url', '')
+            if link.endswith('.pdf'):
+                pdf_links.append(link)
             else:
-                logger.error(f"Error during Bing search (Attempt {attempt + 1}): {response.status_code} - {response.text}")
+                # Make head request to check content type, include if content type valid type
+                try:
+                    head_response = session.head(link, timeout=5)
+                    if head_response.headers.get('Content-Type') == 'application/pdf':
+                        pdf_links.append(link)
+                except requests.RequestException as e:
+                    logger.warning(f"Failed to verify content-type for {link}: {e}")
+        logger.info(f"Successfully retrieved {len(pdf_links)} valid PDF links.")
+    else:
+        pdf_links = []
 
-        except requests.RequestException as e:
-            logger.error(f"Request error during Bing search (Attempt {attempt + 1}): {e}")
+    # Perform search for general websites
+    web_results = perform_search(query_web)
+    if web_results:
+        web_links = [result.get('url', '') for result in web_results[:5]]  # Limit to top 5 web links
+        logger.info(f"Successfully retrieved {len(web_links)} valid web links.")
+    else:
+        web_links = []
 
-        # Implement exponential backoff with a cap
-        if attempt < retries - 1:  # Don't delay after the last attempt
-            delay = min(delay * 2, max_delay)  # Increase the delay but cap it
-            logger.info(f"Waiting {delay} seconds before retrying...")
-            time.sleep(delay)
+    return pdf_links, web_links
 
-    logger.error("Failed to retrieve data after multiple attempts.")
-    return None

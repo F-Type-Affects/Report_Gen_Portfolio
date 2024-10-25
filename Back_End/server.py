@@ -3,8 +3,11 @@ import os
 from flask import Flask, redirect, request, session, jsonify
 from flask import render_template, redirect, url_for
 from flask import flash
+from flask_session import Session
+from redis import Redis
 import requests
 import time
+from datetime import timedelta
 
 from .auth import get_authorization_url, exchange_code_for_token, decode_id_token, get_user_info
 from .database import setup_database, get_all_emails
@@ -16,9 +19,18 @@ from .ahj_manager import search_ahj_registry, perform_bing_search
 
 app = Flask(__name__,template_folder='../Front_End_Web/templates', static_folder='../Front_End_Web/static')
 
+# app configuartion
 app.config['DEBUG'] = False
 app.config['SECRET_KEY'] = config.APP_KEY  # Securely generate and store this
-app.config['SESSION_TYPE'] = 'filesystem'  # Using server-side session management
+app.config['SESSION_TYPE'] = 'redis'
+app.config['SESSION_PERMANENT'] = False  # Set to False so the session expires when the user closes the app
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=30)
+app.config['SESSION_USE_SIGNER'] = True  # Encrypt session cookies for extra security
+app.config['SESSION_KEY_PREFIX'] = 'sml_report_gen:'  # Optional prefix to help distinguish session keys in Redis
+app.config['SESSION_REDIS'] = Redis(host='127.0.0.1', port=6379)  # Connect to your local Redis instance
+
+# setup sessions with redis
+Session(app)
 
 # Configure logging
 logging.basicConfig(level=logging.WARNING)
@@ -178,6 +190,7 @@ def fetch_project_number():
     elif request.method == 'POST':
         selected_email = session.get('selected_email')
         project_number = request.form['project_number']
+        
         # Fetch project details from the backend using selected email and project number
         project_data = get_project_by_code(project_number, selected_email)
         
@@ -189,6 +202,15 @@ def fetch_project_number():
         client_data = get_client_by_id(project.client_id, selected_email)
         client = Client.from_dict(client_data[0]) if client_data else None
         
+        # Store project details in session
+        session['project'] = {
+            'street1': project.street1,
+            'street2': project.street2,
+            'city': project.city,
+            'state': project.state,
+            'zip_code': project.zip_code
+        }
+        
         return render_template('fetch_project_details.html', project=project, client=client)
 
 @app.route('/confirm_project_details')
@@ -199,15 +221,28 @@ def confirm_project_details():
 @app.route('/fetch_ahj_address', methods=['GET', 'POST'])
 def fetch_ahj_address():
     if request.method == 'GET':
-        # If project details are available, pass the address
+        # Check if project details are in session
         project_address = None
         if 'project' in session:
             project = session['project']
             project_address = f"{project['street1']}, {project['city']}, {project['state']}, {project['zip_code']}"
         
-        # Render the fetch_ahj_address page
         return render_template('fetch_ahj_address.html', project_address=project_address)
     
+    elif request.method == 'POST':
+        if 'use_fetch_flow' in request.form:  # If the user wants to fetch project details
+            return redirect(url_for('fetch_project_email'))
+
+        # If user confirmed the project address or manually entered one
+        if 'project' in session:
+            address = f"{session['project']['street1']}, {session['project']['city']}, {session['project']['state']}, {session['project']['zip_code']}"
+        else:
+            address = request.form.get('address')
+        
+        # Store the address in session
+        session['address'] = address
+        return redirect(url_for('display_ahj_results'))
+
     elif request.method == 'POST':
         if 'use_fetch_flow' in request.form:  # If the user wants to fetch project details
             return redirect(url_for('fetch_project_email'))
@@ -231,6 +266,7 @@ def find_ahj():
     ahj_data = search_ahj_registry(address)
 
     # Store the results for future use
+    session['address'] = address
     session['ahj_data'] = ahj_data
 
     return render_template('display_ahj_results.html', ahj_data=ahj_data)
@@ -262,12 +298,49 @@ def store_ahj_data():
     flash("AHJ data stored for export.")
     return redirect(url_for('home'))
 
+@app.route('/search_amendments', methods=['POST'])
+def search_amendments():
+    # Get the AHJ name from the session or address
+    ahj_data = session.get('ahj_data')
+    
+    if not ahj_data:
+        flash("No AHJ data found. Please go back and perform a new search.")
+        return redirect(url_for('fetch_ahj_address'))
+
+    # Get the AHJ name for querying amendments
+    ahj_name = ahj_data[0]['AHJ Name'] if ahj_data else session.get('address')
+
+    # Perform Bing search for both PDFs and website links
+    query = f"{ahj_name} Building Code Amendments"
+    pdf_links, web_links = perform_bing_search(query)
+
+    if not pdf_links and not web_links:
+        flash("No amendments found.")
+        return redirect(url_for('fetch_ahj_address'))
+
+    # Render the results to the user
+    return render_template('amendments_results.html', pdf_links=pdf_links, web_links=web_links)
+
+
+@app.route('/store_amendment_results', methods=['POST'])
+def store_amendment_results():
+    # Store both PDF and web links for export later
+    session['amendment_pdf_links'] = session.get('pdf_links')
+    session['amendment_web_links'] = session.get('web_links')
+    flash("Amendment data stored for export.")
+    return redirect(url_for('home'))
+
 def login_user(sub):
     session['user_sub'] = sub  # Store the sub in session after successful login
 
 def get_user_sub():
     return session.get('user_sub')  # Retrieve the sub when needed
 
+@app.route('/exit_app')
+def exit_app():
+    session.clear()  # Clear all session data for the user
+    flash("You have been logged out. Session data cleared.")
+    return redirect(url_for('home'))
 
 if __name__ == '__main__':
     app.run(port=8000)

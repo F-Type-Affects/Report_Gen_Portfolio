@@ -41,9 +41,17 @@
             </tbody>
         </table>
 
+        <!-- Store AHJ data -->
         <form method="POST" action="{{ url_for('store_ahj_data') }}">
             <button type="submit" class="confirm-btn">Store for Export</button>
         </form>
+
+        <!-- Search for Amendments -->
+        <form method="POST" action="{{ url_for('search_amendments') }}">
+            <button type="submit" class="amendments-btn">Search for Amendments</button>
+        </form>
+
+        <!-- Back to Home -->
         <button class="back-btn" onclick="window.location.href='{{ url_for('home') }}'">Home</button>
     </div>
 </body>
