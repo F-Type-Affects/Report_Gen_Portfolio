@@ -30,7 +30,7 @@
             <button onclick="window.location.href='fetch_ahj_address'">Find AHJ & Amendments</button>
             <button>Export Project Details</button>
             <button>Create Cover Sheet</button>
-            <button onclick="window.location.href='/exit_app'" class="exit-btn"> Exit Program </button>
+            <button onclick="exitApp()"> Exit Program </button>
         </nav>
         
         <main class="content">
@@ -63,5 +63,20 @@
             </div>
         </main>
     </div>
+    <!-- Close Browser window on exit -->
+    <script>
+        function exitApp() {
+            fetch('/exit_app')
+                .then(response => {
+                    if (response.ok) {
+                        // Clear session and close the browser tab
+                        window.close();
+                    }
+                })
+                .catch(error => {
+                    console.error("Error during exit:", error);
+                });
+        }
+    </script>
 </body>
 </html>

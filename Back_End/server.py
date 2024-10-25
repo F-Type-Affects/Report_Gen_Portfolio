@@ -1,5 +1,8 @@
 import logging
 import os
+import webbrowser
+import threading
+import subprocess
 from flask import Flask, redirect, request, session, jsonify
 from flask import render_template, redirect, url_for
 from flask import flash
@@ -342,5 +345,25 @@ def exit_app():
     flash("You have been logged out. Session data cleared.")
     return redirect(url_for('home'))
 
+def open_browser():
+    time.sleep(2)  # Allow the Flask app to start
+    url = 'http://127.0.0.1:8000'
+    
+    # Command to open Chrome in app mode in a new window
+    chrome_command = [
+        "chrome.exe",  # Replace with "chrome" or "chrome.exe" if on Windows
+        "--new-window",
+        f"--app={url}"
+    ]
+    
+    try:
+        subprocess.Popen(chrome_command)  # Open Chrome in standalone mode
+    except Exception as e:
+        logging.error(f"Failed to open Chrome in standalone mode: {e}")
+        webbrowser.open(url)  # Fallback to the default browser
+
 if __name__ == '__main__':
-    app.run(port=8000)
+    # Start the browser-opening function in a separate thread
+    threading.Thread(target=open_browser).start()
+    # Launch the Flask app
+    app.run(port=8000, use_reloader=False)
