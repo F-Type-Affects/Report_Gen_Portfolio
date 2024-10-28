@@ -1,0 +1,25 @@
+<!-- File: templates/find_client.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Find Client</title>
+    <link rel="stylesheet" href="../static/css/find_client.css">
+</head>
+<body>
+    <header>
+        <h1>Find Existing Client</h1>
+    </header>
+    <div class="container">
+        <form action="/create_project/find_client" method="POST">
+            <label for="client_name">Client Name:</label>
+            <input type="text" id="client_name" name="client_name" required>
+
+            <div class="button-group">
+                <button type="submit">Search Client</button>
+                <button type="button" onclick="window.location.href='/'">Go Home</button>
+            </div>
+        </form>
+    </div>
+</body>
+</html>

@@ -19,6 +19,7 @@ from .project_manager import get_project_by_code, get_client_by_id
 from .models import Project, Client
 from . import config
 from .ahj_manager import search_ahj_registry, perform_bing_search
+from .create_project import get_clients_by_name, get_managers_list, create_project_in_bqe
 
 app = Flask(__name__,template_folder='../Front_End_Web/templates', static_folder='../Front_End_Web/static')
 
@@ -43,10 +44,12 @@ logger = logging.getLogger(__name__)
 DATABASE_PATH = config.DATABASE_PATH
 setup_database(DATABASE_PATH)
 
+# load the home page of application from template
 @app.route('/')
 def home():
     return render_template('index.html')
 
+# build authentication url and open login page for user
 @app.route('/login')
 def login():
     # Check client_id directly
@@ -62,6 +65,7 @@ def login():
     # Redirect the user to the BQE Core authorization page
     return redirect(auth_url)
 
+# handle call back response from BQE Core OAuth2 process and exchange code for tokens
 @app.route('/callback')
 def callback():
     code = request.args.get('code')
@@ -124,6 +128,7 @@ def callback():
         logging.error(f"Error during callback processing: {e}")
         return "An internal error occured.", 500
 
+# get a users access token for API call
 @app.route('/api/token')
 def get_access_token():
     sub = session.get('user_sub')
@@ -172,7 +177,7 @@ def get_amendments():
     
     return jsonify({'error': 'failed to retrieve ammendments after multiple attempts'}), 500
 
-
+# fetches user email in order to fetch project details
 @app.route('/fetch_project_email', methods=['GET', 'POST'])
 def fetch_project_email():
     if request.method == 'GET':
@@ -186,6 +191,7 @@ def fetch_project_email():
         session['selected_email'] = selected_email
         return redirect(url_for('fetch_project_number'))
 
+# renders template to enter project number and searches project with project number provided
 @app.route('/fetch_project_number', methods=['GET', 'POST'])
 def fetch_project_number():
     if request.method == 'GET':
@@ -217,11 +223,13 @@ def fetch_project_number():
         
         return render_template('fetch_project_details.html', project=project, client=client)
 
+# If user confirms project details display success message
 @app.route('/confirm_project_details')
 def confirm_project_details():
     flash('Project details confirmed and saved!')
     return redirect(url_for('home'))
 
+# handles getting the address from user to make AHJ search
 @app.route('/fetch_ahj_address', methods=['GET', 'POST'])
 def fetch_ahj_address():
     if request.method == 'GET':
@@ -261,6 +269,7 @@ def fetch_ahj_address():
         session['address'] = address
         return redirect(url_for('display_ahj_results'))
 
+# performs the actual AHJ registry search with the address provided from user or other methods
 @app.route('/find_ahj', methods=['POST'])
 def find_ahj():
     # Logic for finding AHJ
@@ -275,6 +284,7 @@ def find_ahj():
 
     return render_template('display_ahj_results.html', ahj_data=ahj_data)
 
+# displays the AHJ results to user
 @app.route('/display_ahj_results', methods=['GET', 'POST'])
 def display_ahj_results():
     # Get the address from the session
@@ -295,6 +305,7 @@ def display_ahj_results():
     # Render the AHJ results
     return render_template('display_ahj_results.html', ahj_data=ahj_data)
 
+# stores the AHJ information to be exported or used later
 @app.route('/store_ahj_data', methods=['POST'])
 def store_ahj_data():
     # Store AHJ Data for export in the session
@@ -302,6 +313,7 @@ def store_ahj_data():
     flash("AHJ data stored for export.")
     return redirect(url_for('home'))
 
+# performs the actual bing search for amendments
 @app.route('/search_amendments', methods=['POST'])
 def search_amendments():
     # Get the AHJ name from the session or address
@@ -325,7 +337,7 @@ def search_amendments():
     # Render the results to the user
     return render_template('amendments_results.html', pdf_links=pdf_links, web_links=web_links)
 
-
+# stores amendment pdf and website links for future use
 @app.route('/store_amendment_results', methods=['POST'])
 def store_amendment_results():
     # Store both PDF and web links for export later
@@ -334,18 +346,130 @@ def store_amendment_results():
     flash("Amendment data stored for export.")
     return redirect(url_for('home'))
 
+# landing page for create project where user selects new or existing
+@app.route('/create_project', methods=['GET'])
+def create_project():
+    return render_template('create_project.html')
+
+# landing page for user if they select existing client
+@app.route('/create_project/existing_client', methods=['GET'])
+def existing_client():
+    emails = get_all_emails()
+    return render_template('fetch_user_email.html', emails=emails)
+
+# general email selection page to be re-used
+@app.route('/create_project/select_email', methods=['POST'])
+def select_email():
+    selected_email = request.form.get('email')
+    session['selected_email'] = selected_email
+    return redirect(url_for('find_client'))
+
+# retrieves list of clients with given name
+@app.route('/create_project/find_client', methods=['GET', 'POST'])
+def find_client():
+    if request.method == 'POST':
+        client_name = request.form.get('client_name')
+        selected_email = session.get('selected_email')
+        if not selected_email:
+            flash('Email not selected. Please start over.')
+            return redirect(url_for('existing_client'))
+
+        client_data = get_clients_by_name(client_name, selected_email)
+        if client_data and 'items' in client_data and len(client_data['items']) > 0:
+            client = client_data['items'][0]
+            session['client_id'] = client['id']
+            return render_template('display_client.html', client=client)
+        else:
+            flash('No client found with the provided name.')
+            return render_template('display_client.html', client=None)
+    else:
+        return render_template('find_client.html')
+
+# stores client id for future use
+@app.route('/create_project/confirm_client', methods=['POST'])
+def confirm_client():
+    client_id = request.form.get('client_id')
+    session['client_id'] = client_id
+    return redirect(url_for('select_manager'))
+
+# allows user to select employee name as manager to get manager id
+@app.route('/create_project/select_manager', methods=['GET', 'POST'])
+def select_manager():
+    if request.method == 'POST':
+        manager_id = request.form.get('manager_id')
+        session['manager_id'] = manager_id
+        return redirect(url_for('enter_project_details'))
+    else:
+        selected_email = session.get('selected_email')
+        if not selected_email:
+            flash('Email not selected. Please start over.')
+            return redirect(url_for('existing_client'))
+
+        managers = get_managers_list(selected_email)
+        return render_template('select_manager.html', managers=managers)
+
+# user enters project details to create and save new project
+@app.route('/create_project/enter_project_details', methods=['GET', 'POST'])
+def enter_project_details():
+    if request.method == 'POST':
+        # Get project details from form
+        project_code = request.form.get('project_code')
+        contract_type = request.form.get('contract_type')
+        project_name = request.form.get('project_name')
+        project_type = request.form.get('project_type')
+        project_address = request.form.get('project_address')
+        email = request.form.get('email')
+        phone_number = request.form.get('phone_number')
+
+        # Get client_id and manager_id from session
+        client_id = session.get('client_id')
+        manager_id = session.get('manager_id')
+        selected_email = session.get('selected_email')
+
+        if not all([client_id, manager_id, selected_email]):
+            flash('Session data missing. Please start over.')
+            return redirect(url_for('create_project'))
+
+        # Create the project in BQE Core
+        result = create_project_in_bqe(
+            project_code,
+            contract_type,
+            project_name,
+            project_type,
+            project_address,
+            email,
+            phone_number,
+            client_id,
+            manager_id,
+            selected_email
+        )
+
+        if result:
+            flash('Project created successfully!')
+            return redirect(url_for('home'))
+        else:
+            flash('Failed to create project.')
+            return redirect(url_for('enter_project_details'))
+    else:
+        return render_template('project_details.html')
+
+
 def login_user(sub):
     session['user_sub'] = sub  # Store the sub in session after successful login
 
 def get_user_sub():
     return session.get('user_sub')  # Retrieve the sub when needed
 
+# clears all session data for the user and returns them to the home page
+# should close app but not working
 @app.route('/exit_app')
 def exit_app():
     session.clear()  # Clear all session data for the user
     flash("You have been logged out. Session data cleared.")
     return redirect(url_for('home'))
 
+# should launch app in its own browser
+# is not working
 def open_browser():
     time.sleep(2)  # Allow the Flask app to start
     url = 'http://127.0.0.1:8000'
@@ -363,6 +487,7 @@ def open_browser():
         logging.error(f"Failed to open Chrome in standalone mode: {e}")
         webbrowser.open(url)  # Fallback to the default browser
 
+# entry point
 if __name__ == '__main__':
     # Start the browser-opening function in a separate thread
     threading.Thread(target=open_browser).start()
