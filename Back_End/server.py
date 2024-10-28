@@ -130,7 +130,7 @@ def get_access_token():
     if sub is None:
         return jsonify({"error": "User not authenticated"}), 401
     try:
-        access_token = get_valid_access_token(sub)  # Assuming this function fetches the token securely
+        access_token = get_valid_access_token(sub)  # function to fetch token
         return jsonify({'access_token': access_token}), 200
     except Exception as e:
         logging.error(f"Error retrieving access token: {e}")
@@ -171,6 +171,7 @@ def get_amendments():
         return jsonify({'amendments': website_links})
     
     return jsonify({'error': 'failed to retrieve ammendments after multiple attempts'}), 500
+
 
 @app.route('/fetch_project_email', methods=['GET', 'POST'])
 def fetch_project_email():
