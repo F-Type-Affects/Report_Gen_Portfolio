@@ -14,18 +14,13 @@
         {% if client %}
             <table>
                 <tr>
-                    <th>Client ID</th>
-                    <td>{{ client['id'] }}</td>
-                </tr>
-                <tr>
                     <th>Client Name</th>
                     <td>{{ client['name'] }}</td>
                 </tr>
-                <!-- Add more fields if necessary -->
             </table>
             <div class="button-group">
                 <form action="/create_project/confirm_client" method="POST">
-                    <!-- Hidden inputs to pass data -->
+                    <!-- Hidden input to store client_id for future use -->
                     <input type="hidden" name="client_id" value="{{ client['id'] }}">
                     <button type="submit">Confirm Client</button>
                 </form>

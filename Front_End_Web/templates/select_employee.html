@@ -1,0 +1,31 @@
+<!-- File: templates/select_employee.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Select Employee</title>
+    <link rel="stylesheet" href="../static/css/select_employee.css">
+</head>
+<body>
+    <header>
+        <h1>Select Project Manager</h1>
+    </header>
+    <div class="container">
+        <form action="/create_project/get_manager_id" method="POST">
+            <label for="employee">Employee:</label>
+            <select id="employee" name="employee_name" required>
+                {% for employee in employees %}
+                    <option value="{{ employee['firstName'] }} {{ employee['lastName'] }}">
+                        {{ employee['firstName'] }} {{ employee['lastName'] }}
+                    </option>
+                {% endfor %}
+            </select>
+
+            <div class="button-group">
+                <button type="submit">Get Manager ID</button>
+                <button type="button" onclick="window.location.href='/create_project/find_client'">Back to Client</button>
+            </div>
+        </form>
+    </div>
+</body>
+</html>

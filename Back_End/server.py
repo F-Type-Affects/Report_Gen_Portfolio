@@ -19,7 +19,7 @@ from .project_manager import get_project_by_code, get_client_by_id
 from .models import Project, Client
 from . import config
 from .ahj_manager import search_ahj_registry, perform_bing_search
-from .create_project import get_clients_by_name, get_managers_list, create_project_in_bqe
+from .create_project import get_clients_by_name, get_employees, fetch_manager_id, send_create_project_request
 
 app = Flask(__name__,template_folder='../Front_End_Web/templates', static_folder='../Front_End_Web/static')
 
@@ -362,51 +362,44 @@ def existing_client():
 def select_email():
     selected_email = request.form.get('email')
     session['selected_email'] = selected_email
-    return redirect(url_for('find_client'))
+    return redirect(url_for('find_client_landing'))
 
-# retrieves list of clients with given name
-@app.route('/create_project/find_client', methods=['GET', 'POST'])
-def find_client():
-    if request.method == 'POST':
-        client_name = request.form.get('client_name')
-        selected_email = session.get('selected_email')
-        if not selected_email:
-            flash('Email not selected. Please start over.')
-            return redirect(url_for('existing_client'))
+@app.route('/create_project/find_client', methods=['GET'])
+def find_client_landing():
+    return render_template('find_client_landing.html')
 
-        client_data = get_clients_by_name(client_name, selected_email)
-        if client_data and 'items' in client_data and len(client_data['items']) > 0:
-            client = client_data['items'][0]
-            session['client_id'] = client['id']
-            return render_template('display_client.html', client=client)
-        else:
-            flash('No client found with the provided name.')
-            return render_template('display_client.html', client=None)
+
+@app.route('/create_project/search_client', methods=['GET'])
+def search_client():
+    # Use request.args.get for GET requests to retrieve query parameters
+    client_name = request.args.get('client_name')
+    
+    selected_email = session.get('selected_email')
+    if not selected_email:
+        flash('Email not selected. Please start over.')
+        return redirect(url_for('find_client_landing'))
+
+    if client_name is None:
+        flash("Client name not provided.")
+        return redirect(url_for('find_client_landing'))
+
+    # Proceed with the API call to fetch client data
+    client_data = get_clients_by_name(client_name, selected_email)
+
+    if client_data and len(client_data) > 0:
+        client = client_data[0]  # Access the first client directly
+        session['client_id'] = client['id']
+        return render_template('display_client.html', client=client)
     else:
-        return render_template('find_client.html')
+        flash('No client found with the provided name.')
+        return render_template('display_client.html', client=None)
 
-# stores client id for future use
 @app.route('/create_project/confirm_client', methods=['POST'])
 def confirm_client():
     client_id = request.form.get('client_id')
-    session['client_id'] = client_id
-    return redirect(url_for('select_manager'))
+    session['client_id'] = client_id  # Store the client_id in the session for future use
+    return redirect(url_for('select_employee'))
 
-# allows user to select employee name as manager to get manager id
-@app.route('/create_project/select_manager', methods=['GET', 'POST'])
-def select_manager():
-    if request.method == 'POST':
-        manager_id = request.form.get('manager_id')
-        session['manager_id'] = manager_id
-        return redirect(url_for('enter_project_details'))
-    else:
-        selected_email = session.get('selected_email')
-        if not selected_email:
-            flash('Email not selected. Please start over.')
-            return redirect(url_for('existing_client'))
-
-        managers = get_managers_list(selected_email)
-        return render_template('select_manager.html', managers=managers)
 
 # user enters project details to create and save new project
 @app.route('/create_project/enter_project_details', methods=['GET', 'POST'])
@@ -430,19 +423,21 @@ def enter_project_details():
             flash('Session data missing. Please start over.')
             return redirect(url_for('create_project'))
 
-        # Create the project in BQE Core
-        result = create_project_in_bqe(
-            project_code,
-            contract_type,
-            project_name,
-            project_type,
-            project_address,
-            email,
-            phone_number,
-            client_id,
-            manager_id,
-            selected_email
-        )
+        project_details = {
+            "clientId": client_id,
+            "managerId": manager_id,
+            "code": project_code,
+            "name": project_name,
+            "type": project_type,
+            "contractType": contract_type,
+            "address": [project_address],  # Assuming `project_address` is a dictionary
+            "billingContact": {
+            "phone": phone_number,
+            "email": email
+            }
+        }
+
+        result = send_create_project_request(project_details)
 
         if result:
             flash('Project created successfully!')
@@ -452,6 +447,65 @@ def enter_project_details():
             return redirect(url_for('enter_project_details'))
     else:
         return render_template('project_details.html')
+
+
+@app.route('/create_project/select_employee', methods=['GET'])
+def select_employee():
+    selected_email = session.get('selected_email')
+    employees = get_employees(selected_email)
+    
+    if employees is None or len(employees) == 0:
+        flash("Failed to load employees or no employees found.")
+        return redirect(url_for('create_project'))  # Redirect back or to an error page if necessary
+    
+    return render_template('select_employee.html', employees=employees)
+
+
+@app.route('/create_project/get_manager_id', methods=['POST'])
+def get_manager_id():
+    employee_name = request.form.get('employee_name')
+    first_name, last_name = employee_name.split()
+    
+    selected_email = session.get('selected_email')
+    manager_id = fetch_manager_id(first_name, last_name, selected_email)
+
+    if manager_id:
+        session['manager_id'] = manager_id
+        return redirect(url_for('make_project'))
+    else:
+        flash("No manager found for the selected employee.")
+        return redirect(url_for('select_employee'))
+
+@app.route('/create_project/submit', methods=['POST'])
+def submit_project():
+    project_details = {
+        "clientId": session['client_id'],
+        "managerId": session['manager_id'],
+        "code": request.form.get('project_number'),
+        "name": request.form.get('project_name'),
+        "type": request.form.get('project_type'),
+        "contractType": request.form.get('contract_type'),
+        "address": [{
+            "street1": request.form.get('street1'),
+            "street2": request.form.get('street2'),
+            "city": request.form.get('city'),
+            "state": request.form.get('state'),
+            "zip": request.form.get('zip')
+        }],
+        "billingContact": {
+            "phone": request.form.get('phone_number'),
+            "email": request.form.get('email')
+        }
+    }
+
+    response = send_create_project_request(project_details)
+    
+    if response.status_code == 201:
+        flash("Project created successfully!")
+        return redirect(url_for('index'))
+    else:
+        flash("Failed to create project. Please try again.")
+        return redirect(url_for('make_project'))
 
 
 def login_user(sub):
