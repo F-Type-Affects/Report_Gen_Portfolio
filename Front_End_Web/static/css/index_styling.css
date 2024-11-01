@@ -41,25 +41,29 @@ header .banner {
     margin-right: 70px;              /* Adds space between the sidebar and content */
 }
 
-/* Styling for buttons inside the sidebar */
-.sidebar button {
-    width: 90%;                      /* Buttons take 90% of the sidebar width */
-    margin: 10px 0;                  /* Adds vertical spacing between buttons */
-    padding: 10px;                   /* Adds padding inside the buttons */
-    background-color: red;           /* Sets the background color of the buttons to red */
-    color: white;                    /* Sets the button text color to white */
-    border: none;                    /* Removes any borders */
-    border-radius: 25px;             /* Rounds the button corners */
-    font-size: 1rem;                 /* Sets the button font size */
-    cursor: pointer;                 /* Changes the cursor to a pointer when hovering over buttons */
-    transition: background-color 0.3s; /* Adds a smooth transition effect for background color change */
+/* Styling for elements with the 'btn' class */
+.btn {
+    width: 90%;
+    margin: 10px 0;
+    padding: 10px;
+    background-color: red;
+    color: white;
+    text-decoration: none;           /* Removes underline from links */
+    text-align: center;              /* Centers the text */
+    border: none;
+    border-radius: 25px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background-color 0.3s, color 0.3s;
+    display: inline-block;           /* Ensures proper sizing for <a> elements */
 }
 
-/* Hover effect for buttons: changes background and text color on hover */
-.sidebar button:hover {
-    background-color: white;         /* Changes background to white on hover */
-    color: red;                      /* Changes text color to red on hover */
+/* Hover effect for 'btn' class */
+.btn:hover {
+    background-color: white;
+    color: red;
 }
+
 
 /* Instructions div: the main content area styling */
 #instructions {

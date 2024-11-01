@@ -23,14 +23,14 @@
     
     <div class="container">
         <nav class="sidebar">
-            <button onclick="window.location.href='login'">Login & Authenticate</button>
-            <button onclick="window.location.href='/create_project'">Create Project</button>
-            <button>Update Project Address</button>
-            <button onclick="window.location.href='/fetch_project_email'">Fetch Project Details</button>
-            <button onclick="window.location.href='fetch_ahj_address'">Find AHJ & Amendments</button>
-            <button>Export Project Details</button>
-            <button>Create Cover Sheet</button>
-            <button onclick="exitApp()"> Exit Program </button>
+            <a href="{{ url_for('login') }}" class="btn">Login & Authenticate</a>
+            <a href="{{ url_for('create_project') }}" class="btn">Create Project</a>
+            <a href="{{ url_for('update_project_address') }}" class="btn">Update Project Address</a>
+            <a href="{{ url_for('fetch_project_email') }}" class="btn">Fetch Project Details</a>
+            <a href="{{ url_for('fetch_ahj_address') }}" class="btn">Find AHJ & Amendments</a>
+            <a href="{{ url_for('export_project_details') }}" class="btn">Export Project Details</a>
+            <a href="{{ url_for('create_cover_sheet') }}" class="btn">Create Cover Sheet</a>
+            <button onclick="exitApp()" class="btn">Exit Program</button>
         </nav>
         
         <main class="content">
