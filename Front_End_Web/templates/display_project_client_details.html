@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Project Details</title>
-    <link rel="stylesheet" href="../static/css/fetch_project_details.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/display_project_client_details.css') }}">
 </head>
 <body>
     <header>
@@ -18,7 +18,9 @@
         <p>Billing Contact: {{ project.billing_contact }}</p>
         
         <h3>Client Details</h3>
-        <p>Client Name: {{ client.name }}</p>
+        <p>Client Name: {{ client.client_name }}</p>
+        <p>Email: {{ client.client_email }}</p>
+        <p>Phone: {{ client.client_phone }}</p>
         
         <h3>Project Address</h3>
         <p>{{ project.street1 }}, {{ project.street2 }}<br>{{ project.city }}, {{ project.state }} {{ project.zip_code }}</p>
@@ -27,7 +29,7 @@
         <p>{{ client.street1 }}, {{ client.street2 }}<br>{{ client.city }}, {{ client.state }} {{ client.zip_code }}</p>
 
         <div class="button-group">
-            <button type="button" onclick="window.location.href='/fetch_project_email'">Search New Project</button>
+            <button type="button" onclick="window.location.href='{{ url_for("select_user_email_get") }}'">Search New Project</button>
             <button type="button" onclick="window.location.href='/confirm_project_details'">Confirm Details</button>
         </div>
     </div>

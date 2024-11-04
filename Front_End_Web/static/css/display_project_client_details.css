@@ -1,4 +1,4 @@
-/* Styling for Fetch Project Details Page */
+/* Styling for Display Project and Client Details Page */
 body {
     background-color: #f4f4f9;
     font-family: 'Arial', sans-serif;
@@ -24,26 +24,35 @@ h1 {
 }
 
 .details-section {
-    margin-bottom: 20px;
+    margin-bottom: 25px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #e0e0e0;
 }
 
-.details-section h2 {
-    font-size: 18px;
-    color: #333;
-    margin-bottom: 10px;
+.details-section h3 {
+    font-size: 20px;
+    color: #007ACC;
+    margin-bottom: 15px;
     border-bottom: 2px solid #007ACC;
     padding-bottom: 5px;
 }
 
 .details-section label {
-    font-size: 14px;
+    font-size: 15px;
     color: #555;
+    font-weight: bold;
 }
 
 .details-section p {
     font-size: 16px;
     color: #333;
-    margin: 5px 0;
+    margin: 4px 0;
+}
+
+.button-group {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 25px;
 }
 
 button {
@@ -55,7 +64,7 @@ button {
     border: none;
     border-radius: 5px;
     cursor: pointer;
-    margin-top: 20px;
+    transition: background-color 0.3s;
 }
 
 button:hover {

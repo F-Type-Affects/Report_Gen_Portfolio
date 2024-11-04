@@ -47,45 +47,10 @@ setup_database(DATABASE_PATH)
 
 ##############################################################
 # load the home page of application from template
+
 @app.route('/')
 def home():
     return render_template('index.html')
-
-
-#####################################################################
-# routes to select user's email which is required to retrieve user sub which is required for API calls to CORE
-@app.route('/select_email', methods=['GET'])
-def select_email():
-    # Retrieve the 'next' parameter from the query string
-    next_url = request.args.get('next')
-    
-    if not next_url:
-        flash('No destination specified for email selection.', 'error')
-        return redirect(url_for('home'))
-    
-    # Fetch emails from the database
-    emails = get_all_emails()
-    
-    return render_template('select_email.html', emails=emails, next_url=next_url)
-
-@app.route('/select_email_submit', methods=['POST'])
-def select_email_submit():
-    selected_email = request.form.get('email')
-    next_url = request.form.get('next_url')
-    
-    if not selected_email:
-        flash('Please select an email.', 'error')
-        return redirect(request.referrer or url_for('select_email', next=next_url))
-    
-    # Store the selected email in the session
-    session['selected_email'] = selected_email
-    flash(f'Email "{selected_email}" selected successfully.', 'success')
-    
-    if next_url:
-        return redirect(next_url)
-    else:
-        flash('No destination specified after email selection.', 'error')
-        return redirect(url_for('home'))
 
 ############################
 # login and authentication app routes
@@ -182,13 +147,37 @@ def get_access_token():
         logging.error(f"Error retrieving access token: {e}")
         return jsonify({"error": "Failed to retrieve access token"}), 500
 
-######################################################
-# app route to fetch project and client details to export
+#####################################################################
+# routes to select user's email which is required to retrieve user sub which is required for API calls to CORE
 
+@app.route('/select_user_email_get', methods=['GET'])
+def select_user_email_get():
+    next_url = url_for('fetch_project_number_get')  # URL to go to after selecting the email
+    emails = get_all_emails()  # Retrieve emails from the database
+    return render_template('select_user_email.html', emails=emails, next_url=next_url)
+
+@app.route('/select_user_email_post', methods=['POST'])
+def select_user_email_post():
+    selected_email = request.form.get('email')
+    next_url = request.form.get('next_url')
+    
+    if not selected_email:
+        flash('Please select an email.', 'error')
+        return redirect(url_for('select_user_email_get'))
+    
+    # Store the selected email in the session
+    session['selected_email'] = selected_email
+    flash(f'Email "{selected_email}" selected successfully.', 'success')
+
+    return redirect(next_url or url_for('home'))
+
+#####################################################################
+# GET and POST routes to enter a project number and to search a project by number
 # GET route to display project number entry form
 @app.route('/fetch_project_number', methods=['GET'])
 def fetch_project_number_get():
-    return render_template('fetch_project_number.html')
+    return render_template('select_project_number.html')  # Updated template name
+
 
 # POST route to handle project number submission
 @app.route('/fetch_project_number_submit', methods=['POST'])
@@ -196,7 +185,7 @@ def fetch_project_number_post():
     selected_email = session.get('selected_email')
     if not selected_email:
         flash('No email selected. Please select an email first.', 'error')
-        return redirect(url_for('fetch_project_email_get'))
+        return redirect(url_for('select_user_email_get'))
     
     project_number = request.form.get('project_number')
     if not project_number:
@@ -210,26 +199,45 @@ def fetch_project_number_post():
         flash('Project not found. Please check the Project ID and try again.', 'error')
         return redirect(url_for('fetch_project_number_get'))
     
+    # Create project and client objects from the retrieved data
     project = Project.from_dict(project_data[0])
     client_data = get_client_by_id(project.client_id, selected_email)
     client = Client.from_dict(client_data[0]) if client_data else None
     
-    # Store project details in session
-    session['project'] = {
+    # Store project and client details in the session for use on the details page
+    session['project_data'] = {
+        'project_number': project_number,
+        'name': project.name,
+        'purchase_order_number': project.purchase_order_number,
+        'billing_contact': project.billing_contact,
         'street1': project.street1,
         'street2': project.street2,
         'city': project.city,
         'state': project.state,
         'zip_code': project.zip_code
     }
+    session['client_data'] = {
+        'client_name': client.name,
+        'client_email': client.email,
+        'client_phone': client.phone,
+        'street1': client.street1,
+        'street2': client.street2,
+        'city': client.city,
+        'state': client.state,
+        'zip_code': client.zip_code
+    }
     
-    return render_template('fetch_project_details.html', project=project, client=client)
+    # Redirect to the display page route
+    return redirect(url_for('display_project_client_details'))
 
-# If user confirms project details display success message
-@app.route('/confirm_project_details')
-def confirm_project_details():
-    flash('Project details confirmed and saved!')
-    return redirect(url_for('home'))
+############################################################
+# app route to display the project and client details for the user
+# Route to display project and client details
+@app.route('/display_project_client_details', methods=['GET'])
+def display_project_client_details():
+    project = session.get('project_data', {})
+    client = session.get('client_data', {})
+    return render_template('display_project_client_details.html', project=project, client=client)
 
 #####################################################
 # app routes to search AHJ registry and Bing for amendments to build codes
@@ -403,295 +411,6 @@ def store_amendment_results():
     session['amendment_web_links'] = session.get('web_links')
     flash("Amendment data stored for export.")
     return redirect(url_for('home'))
-
-########################################################
-# app routes to create project
-
-# landing page for create project where user selects new or existing
-@app.route('/create_project', methods=['GET'])
-def create_project():
-    return render_template('create_project.html')
-
-# landing page for user if they select existing client
-@app.route('/create_project/existing_client', methods=['GET'])
-def existing_client():
-    emails = get_all_emails()
-    return render_template('fetch_user_email.html', emails=emails)
-
-# general email selection page to be re-used
-@app.route('/create_project/select_email', methods=['POST'])
-def select_email():
-    selected_email = request.form.get('email')
-    session['selected_email'] = selected_email
-    return redirect(url_for('find_client_landing'))
-
-@app.route('/create_project/find_client', methods=['GET'])
-def find_client_landing():
-    return render_template('find_client_landing.html')
-
-
-@app.route('/create_project/search_client', methods=['GET'])
-def search_client():
-    # Use request.args.get for GET requests to retrieve query parameters
-    client_name = request.args.get('client_name')
-    
-    selected_email = session.get('selected_email')
-    if not selected_email:
-        flash('Email not selected. Please start over.')
-        return redirect(url_for('find_client_landing'))
-
-    if client_name is None:
-        flash("Client name not provided.")
-        return redirect(url_for('find_client_landing'))
-
-    # Proceed with the API call to fetch client data
-    client_data = get_clients_by_name(client_name, selected_email)
-
-    if client_data and len(client_data) > 0:
-        client = client_data[0]  # Access the first client directly
-        session['client_id'] = client['id']
-        return render_template('display_client.html', client=client)
-    else:
-        flash('No client found with the provided name.')
-        return render_template('display_client.html', client=None)
-
-@app.route('/create_project/confirm_client', methods=['POST'])
-def confirm_client():
-    client_id = request.form.get('client_id')
-    session['client_id'] = client_id  # Store the client_id in the session for future use
-    return redirect(url_for('select_employee'))
-
-# GET route to display the project details form
-@app.route('/create_project/enter_project_details', methods=['GET'])
-def enter_project_details_get():
-    return render_template('project_details.html')
-
-# POST route to handle project details submission
-@app.route('/create_project/enter_project_details_submit', methods=['POST'])
-def enter_project_details_post():
-    # Get project details from form
-    project_code = request.form.get('project_code')
-    contract_type = request.form.get('contract_type')
-    project_name = request.form.get('project_name')
-    project_type = request.form.get('project_type')
-    project_address = request.form.get('project_address')
-    email = request.form.get('email')
-    phone_number = request.form.get('phone_number')
-
-    # Get client_id and manager_id from session
-    client_id = session.get('client_id')
-    manager_id = session.get('manager_id')
-    selected_email = session.get('selected_email')
-
-    if not all([client_id, manager_id, selected_email]):
-        flash('Session data missing. Please start over.', 'error')
-        return redirect(url_for('create_project'))
-
-    project_details = {
-        "clientId": client_id,
-        "managerId": manager_id,
-        "code": project_code,
-        "name": project_name,
-        "type": project_type,
-        "contractType": contract_type,
-        "address": [project_address],  # Assuming `project_address` is a dictionary
-        "billingContact": {
-            "phone": phone_number,
-            "email": email
-        }
-    }
-
-    result = send_create_project_request(project_details)
-
-    if result:
-        flash('Project created successfully!', 'success')
-        return redirect(url_for('home'))
-    else:
-        flash('Failed to create project.', 'error')
-        return redirect(url_for('enter_project_details_get'))
-
-
-@app.route('/create_project/select_employee', methods=['GET'])
-def select_employee():
-    selected_email = session.get('selected_email')
-    employees = get_employees(selected_email)
-    
-    if employees is None or len(employees) == 0:
-        flash("Failed to load employees or no employees found.")
-        return redirect(url_for('create_project'))  # Redirect back or to an error page if necessary
-    
-    return render_template('select_employee.html', employees=employees)
-
-
-@app.route('/create_project/get_manager_id', methods=['POST'])
-def get_manager_id():
-    employee_name = request.form.get('employee_name')
-    first_name, last_name = employee_name.split()
-    
-    selected_email = session.get('selected_email')
-    manager_id = fetch_manager_id(first_name, last_name, selected_email)
-
-    if manager_id:
-        session['manager_id'] = manager_id
-        return redirect(url_for('make_project'))
-    else:
-        flash("No manager found for the selected employee.")
-        return redirect(url_for('select_employee'))
-
-@app.route('/create_project/submit', methods=['POST'])
-def submit_project():
-    project_details = {
-        "clientId": session['client_id'],
-        "managerId": session['manager_id'],
-        "code": request.form.get('project_number'),
-        "name": request.form.get('project_name'),
-        "type": request.form.get('project_type'),
-        "contractType": request.form.get('contract_type'),
-        "address": [{
-            "street1": request.form.get('street1'),
-            "street2": request.form.get('street2'),
-            "city": request.form.get('city'),
-            "state": request.form.get('state'),
-            "zip": request.form.get('zip')
-        }],
-        "billingContact": {
-            "phone": request.form.get('phone_number'),
-            "email": request.form.get('email')
-        }
-    }
-
-    response = send_create_project_request(project_details)
-    
-    if response.status_code == 201:
-        flash("Project created successfully!")
-        return redirect(url_for('index'))
-    else:
-        flash("Failed to create project. Please try again.")
-        return redirect(url_for('make_project'))
-
-###############################################
-# app routes to export project details
-# GET route to display the export project details page
-@app.route('/export_project_details', methods=['GET'])
-def export_project_details_get():
-    # Retrieve project and client data from the session
-    project_data = session.get('project_data')
-    client_data = session.get('client_data')
-    ahj_data = session.get('ahj_data')
-    amendment_data = session.get('amendment_data')
-    
-    # Create Project and Client objects if data exists
-    project = Project(**project_data) if project_data else None
-    client = Client(**client_data) if client_data else None
-    
-    return render_template('export_project_details.html', project=project, client=client)
-
-# POST route to handle export project details actions
-@app.route('/export_project_details_submit', methods=['POST'])
-def export_project_details_post():
-    action = request.form.get('action')
-    
-    if action == 'confirm':
-        # Proceed to export the data
-        if not session.get('project_data') or not session.get('client_data'):
-            flash('Cannot export details. Project or client information is missing.', 'error')
-            return redirect(url_for('export_project_details_get'))
-        return redirect(url_for('perform_export'))
-    
-    elif action == 'fetch':
-        # Redirect to fetch project details flow
-        return redirect(url_for('fetch_user_email_get'))
-    
-    elif action == 'home':
-        # Redirect to home page
-        return redirect(url_for('home'))
-    
-    else:
-        flash('Invalid action selected.', 'error')
-        return redirect(url_for('export_project_details_get'))
-
-
-@app.route('/perform_export')
-def perform_export():
-    # Retrieve data from the session
-    project_data = session.get('project_data')
-    client_data = session.get('client_data')
-    ahj_data = session.get('ahj_data')
-    amendment_data = session.get('amendment_data')
-    
-    if not project_data or not client_data:
-        flash('Project and client details are missing. Please fetch them first.')
-        return redirect(url_for('fetch_project_email'))
-    
-    # Create Project and Client objects
-    project = Project(**project_data)
-    client = Client(**client_data)
-    
-    # Create Excel workbook for report
-    report_workbook = create_workbook()
-    report_sheet = report_workbook.active
-
-    # Insert project/client data using models
-    insert_project_data(report_sheet, project)
-    insert_client_data(report_sheet, client)
-
-    # Insert AHJ & Amendment data if available
-    if ahj_data and amendment_data:
-        insert_ahj_data(report_sheet, ahj_data, amendment_data)
-    
-    # Save the workbook
-    # For testing, we'll save it locally; in production, adjust the path accordingly
-    report_directory = config.REPORT_DIRECTORY
-    if not os.path.exists(report_directory):
-        os.makedirs(report_directory)
-    
-    # Construct the file name
-    project_code = project.code.replace('/', '_')
-    project_name = project.name.replace('/', '_')
-    file_name = f"{project_code}_{project_name}.xlsx"
-    full_path = os.path.join(report_directory, file_name)
-    
-    save_result = save_workbook(report_workbook, full_path)
-    
-    if save_result:
-        flash(f"Report created and saved at {full_path}")
-    else:
-        flash("Failed to save the report.")
-    
-    return redirect(url_for('home'))
-
-####################################################
-# app routes to update project address
-# Example of a properly defined route
-@app.route('/update_project_address', methods=['GET', 'POST'])
-def update_project_address():
-    if request.method == 'POST':
-        # Logic to update project address
-        pass
-    return render_template('update_project_address.html')
-
-##########################################
-# app routes for creating cover sheet
-
-# New Placeholder Route for Create Cover Sheet
-@app.route('/create_cover_sheet', methods=['GET', 'POST'])
-def create_cover_sheet():
-    """
-    Placeholder route for creating a cover sheet.
-    Currently displays a 'Coming Soon' page.
-    """
-    try:
-        if request.method == 'POST':
-            # Placeholder logic for handling form submission
-            flash("Create Cover Sheet feature is under development. Please check back later.", "warning")
-            return redirect(url_for('home'))
-        
-        # Render a placeholder template indicating the feature is under construction
-        return render_template('coming_soon.html', feature_name="Create Cover Sheet")
-    except Exception as e:
-        logger.error(f"Error in create_cover_sheet: {e}")
-        return render_template('error.html'), 500
-
 
 ##########################################
 # helper functions to get user sub for API calls

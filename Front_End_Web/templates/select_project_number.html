@@ -3,12 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fetch Project Details - Enter Project Number</title>
-    <link rel="stylesheet" href="../static/css/fetch_project_number.css">
+    <title>Select Project Number</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/select_project_number.css') }}">
 
     <script>
         function showLoading() {
-            // Show the loading spinner/message
             document.getElementById("loading-spinner").style.display = "block";
         }
     </script>
@@ -19,14 +18,13 @@
     </header>
     
     <div class="container">
-        <form action="/fetch_project_number" method="POST" onsubmit="showLoading()">
+        <form action="{{ url_for('fetch_project_number_post') }}" method="POST" onsubmit="showLoading()">
             <label for="project_number">Project Number:</label>
-            <input type="text" id="project_number" name="project_number" required><br><br>
+            <input type="text" id="project_number" name="project_number" required>
             
             <div class="instructions">
                 <h4>Formatting Instructions</h4>
-                <p>Leading/Trailing zeros must be included in the Project ID.<br>
-                For example:</p>
+                <p>Leading/Trailing zeros must be included in the Project ID.</p>
                 <ul>
                     <li>ID 1 should be 0001-17 or 24-0001</li>
                     <li>ID 12 should be 012-17 or 24-012</li>
@@ -36,9 +34,9 @@
             </div>
 
             <button type="submit">Find Project</button>
-            <button type="button" onclick="window.location.href='/fetch_project_email'">Back</button>
+            <button type="button" onclick="window.location.href='{{ url_for("select_user_email_get") }}'">Back</button>
         </form>
-        <!-- Loading Spinner -->
+        
         <div id="loading-spinner" style="display:none;">
             <p>Please wait, fetching project details...</p>
             <div class="spinner"></div>
