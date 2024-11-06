@@ -11,42 +11,62 @@ def create_workbook():
 
     # Define column headers
     headers = [
-        "Project ID", "Project Name", "Street 1", "Street 2", "City",
-        "State", "Zip", "Project PO#", "Client ID", "Client Street 1",
-        "Street 2", "City", "State", "Zip", "Billing Contact"
+        "Project ID", "Project Name", "Project PO #", "Project Address", "Client",
+        "Client Address", "Billing Contact", "AHJ Jurisdiction", "Amendment PDF Links", "Amendment Web Links",
+        "Street 1", "Street 2", "City", "State", "Zip", "Phone", "Email"
     ]
 
     # Insert headers into the first row
     for col, header in enumerate(headers, start=1):
         sheet.cell(row=1, column=col, value=header)
     
-    sheet['A4'] = "AHJ Jurisdiction"
-    sheet['B4'] = "Building Code"
-    sheet["C4"] = "Ammendments"
-
+    sheet['A1'] = "Project ID:"
+    sheet['A2'] = "Project Name:"
+    sheet['A3'] = "Project PO #:"
+    sheet['A4'] = "Project Address:"
+    sheet['A6'] = "Client:"
+    sheet['A7'] = "Client Address:"
+    sheet['A9'] = "Billing Contact:"
+    sheet['A10'] = "Phone:"
+    sheet['A11'] = "Email:"
+    sheet['B4'] = "Street 1"
+    sheet['C4'] = "Street 2"
+    sheet['D4'] = "City"
+    sheet['E4'] = "State"
+    sheet['F4'] = "Zip"
+    sheet['B7'] = "Street 1"
+    sheet['C7'] = "Street 2"
+    sheet['D7'] = "City"
+    sheet['E7'] = "State"
+    sheet['F7'] = "Zip"
+    sheet['H1'] = "AHJ Jurisdiction:"
+    sheet['H6'] = "Amendment PDF Links:"
+    sheet['H17'] = "Amendment Web Links:"
+    
     return workbook
 
 def insert_project_data(sheet, project):
     # Insert project data into the designated cells
-    sheet['A2'] = project.code
+    sheet['B1'] = project.code
     sheet['B2'] = project.name
-    sheet['C2'] = project.street1
-    sheet['D2'] = project.street2
-    sheet['E2'] = project.city
-    sheet['F2'] = project.state
-    sheet['G2'] = project.zip_code
-    sheet['H2'] = project.purchase_order_number
+    sheet['B3'] = project.purchaseOrderNumber
+    sheet['B5'] = project.street1
+    sheet['C5'] = project.street2
+    sheet['D5'] = project.city
+    sheet['E5'] = project.state
+    sheet['F5'] = project.zip_code
 
 def insert_client_data(sheet, client):
     # Insert client data into the designated cells
-    sheet['I2'] = client.client_id
-    sheet['J2'] = client.street1
-    sheet['K2'] = client.street2
-    sheet['L2'] = client.city
-    sheet['M2'] = client.state
-    sheet['N2'] = client.zip_code
-    sheet['O2'] = client.name  # Assuming 'Billing Contact' refers to client name
-
+    sheet['B6'] = client.name
+    sheet['B8'] = client.street1
+    sheet['C8'] = client.street2
+    sheet['D8'] = client.city
+    sheet['E8'] = client.state
+    sheet['F8'] = client.zip_code
+    sheet['B10'] = client.phone
+    sheet['B11'] = client.email
+    
 
 def auto_adjust_column_width(sheet):
     """

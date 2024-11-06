@@ -16,21 +16,34 @@ class Client:
     def from_dict(cls, data):
         """Create a Client instance from a dictionary."""
         address = data.get('address', {})
-        if isinstance(address, list) and address and isinstance(address[0], dict):
-            address_dict = address[0]
-        else:
-            address_dict = {}
+
+        # Extract address fields
+        street1 = address.get('street1', '')
+        street2 = address.get('street2', '')
+        city = address.get('city', '')
+        state = address.get('state', '')
+        zip_code = address.get('zip', '')
+
+        # Extract email and phone from communications list
+        email = ""
+        phone = ""
+        communications = address.get('communications', [])
+        for contact in communications:
+            if contact.get('typeName') == 'Email':
+                email = contact.get('value', '')
+            elif contact.get('typeName') == 'Mobile':
+                phone = contact.get('value', '')
 
         return cls(
             client_id=str(data.get('id', '')),
             name=data.get('name', ''),
-            street1=address_dict.get('street1', ''),
-            street2=address_dict.get('street2', ''),
-            city=address_dict.get('city', ''),
-            state=address_dict.get('state', ''),
-            zip_code=address_dict.get('zip', ''),
-            email=data.get('email', ''),
-            phone=data.get('phone', '')
+            street1=street1,
+            street2=street2,
+            city=city,
+            state=state,
+            zip_code=zip_code,
+            email=email,
+            phone=phone
         )
 
 

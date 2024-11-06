@@ -1,80 +1,56 @@
-/* General container styling */
 .container {
-    max-width: 900px;
-    margin: 20px auto;
+    max-width: 800px;
+    margin: 0 auto;
     padding: 20px;
     background-color: #f9f9f9;
     border-radius: 10px;
     box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
 }
 
-/* Heading styling */
 h2 {
     text-align: center;
     color: #007ACC;
-    margin-bottom: 20px;
 }
 
-/* Table styling */
 table {
     width: 100%;
     border-collapse: collapse;
-    margin-bottom: 20px;
+    margin: 20px 0;
 }
 
-table thead {
+th, td {
+    padding: 10px;
+    border: 1px solid #ddd;
+    text-align: center;
+}
+
+th {
     background-color: #007ACC;
     color: white;
 }
 
-table th, table td {
-    padding: 12px 15px;
-    text-align: left;
-    border-bottom: 1px solid #ddd;
-}
-
-table tr:nth-child(even) {
-    background-color: #f2f2f2;
-}
-
-table tr:hover {
-    background-color: #f1f1f1;
-}
-
-/* Button styling */
-button {
+.confirm-btn, .amendments-btn, .back-btn {
+    display: inline-block;
+    margin: 10px 0;
     padding: 10px 20px;
+    color: white;
     border: none;
     border-radius: 5px;
-    color: white;
     cursor: pointer;
 }
 
-button.confirm-btn {
-    background-color: #007ACC;
-    margin-right: 10px;
-}
-
-button.confirm-btn:hover {
-    background-color: #005F9E;
-}
-
-button.back-btn {
-    background-color: #f44336;
-}
-
-button.back-btn:hover {
-    background-color: #d32f2f;
-}
-
-button.amendments-btn {
+.confirm-btn {
     background-color: #28a745;
 }
 
-button.amendments-btn:hover {
-    background-color: #218838;
+.amendments-btn {
+    background-color: #007ACC;
 }
 
-button:hover {
+.back-btn {
+    background-color: #f44336;
+}
+
+.confirm-btn:hover, .amendments-btn:hover, .back-btn:hover {
     opacity: 0.9;
 }

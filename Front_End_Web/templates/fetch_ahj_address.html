@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Find AHJ & Amendments</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/fetch_ahj_address.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h2>Find AHJ & Amendments</h2>
+        
+        <!-- Display Project and Client Details if available -->
+        {% if session.get('project_data') and session.get('client_data') %}
+            <h3>Project Details</h3>
+            <p><strong>Project Name:</strong> {{ session['project_data']['name'] }}</p>
+            <p><strong>Address:</strong> {{ session['project_data']['street1'] }}, {{ session['project_data']['city'] }}, {{ session['project_data']['state'] }}, {{ session['project_data']['zip_code'] }}</p>
+
+            <h3>Client Details</h3>
+            <p><strong>Client Name:</strong> {{ session['client_data']['client_name'] }}</p>
+            <p><strong>Address:</strong> {{ session['client_data']['street1'] }}, {{ session['client_data']['city'] }}, {{ session['client_data']['state'] }}, {{ session['client_data']['zip_code'] }}</p>
+        {% else %}
+            <!-- Message if Project/Client data is not found -->
+            <p>No project or client details found. Please fetch project details first.</p>
+        {% endif %}
+
+        <!-- Button Group for Actions -->
+        <div class="button-group">
+            <!-- Search AHJ Button (only if project data is available) -->
+            <form method="POST" action="{{ url_for('find_ahj') }}">
+                <input type="hidden" name="address" value="{{ session.get('project_data', {}).get('street1', '') }} {{ session.get('project_data', {}).get('city', '') }} {{ session.get('project_data', {}).get('state', '') }} {{ session.get('project_data', {}).get('zip_code', '') }}">
+                <button type="submit" class="btn btn-primary" {% if not session.get('project_data') %}disabled{% endif %}>Search AHJ</button>
+            </form>
+            
+            <!-- Search Project Info Button -->
+            <form method="GET" action="{{ url_for('select_user_email_get') }}">
+                <button type="submit" class="btn btn-secondary">Search Project Info</button>
+            </form>
+
+            <!-- Go Home Button -->
+            <a href="{{ url_for('home') }}" class="btn btn-danger">Go Home</a>
+        </div>
+    </div>
+</body>
+</html>

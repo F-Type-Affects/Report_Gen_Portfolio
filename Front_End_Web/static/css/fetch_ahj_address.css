@@ -1,3 +1,4 @@
+/* Container Styling */
 .container {
     max-width: 600px;
     margin: 0 auto;
@@ -7,17 +8,20 @@
     box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
 }
 
+/* Header Styling */
 h2 {
     text-align: center;
     color: #007ACC;
 }
 
+/* Form Styling */
 form {
     display: flex;
     flex-direction: column;
     gap: 10px;
 }
 
+/* Input Styling */
 input {
     padding: 10px;
     border: 1px solid #ccc;
@@ -25,6 +29,7 @@ input {
     font-size: 16px;
 }
 
+/* Primary Button Styling */
 button {
     padding: 10px 20px;
     border: none;
@@ -33,17 +38,15 @@ button {
     color: white;
     cursor: pointer;
     margin: 10px 0;
-}
-
-button.back-btn {
-    background-color: #f44336;
+    font-size: 16px;
+    transition: opacity 0.3s;
 }
 
 button:hover {
     opacity: 0.9;
 }
 
-/* Adding styles for secondary button */
+/* Styling for Secondary Button */
 button.btn-secondary {
     background-color: #6c757d;
 }
@@ -52,6 +55,23 @@ button.btn-secondary:hover {
     background-color: #5a6268;
 }
 
+/* Styling for Danger Button */
+button.back-btn, a.btn-danger {
+    background-color: #f44336;
+}
+
+button.back-btn:hover, a.btn-danger:hover {
+    background-color: #d32f2f;
+}
+
+/* Styling for Disabled Button */
+button:disabled {
+    background-color: #cccccc;
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+/* Anchor Button Styling for Consistency */
 a.btn {
     padding: 10px 20px;
     border-radius: 5px;
@@ -64,4 +84,11 @@ a.btn {
 
 a.btn:hover {
     opacity: 0.9;
+}
+
+/* Button Group Layout */
+.button-group {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
 }

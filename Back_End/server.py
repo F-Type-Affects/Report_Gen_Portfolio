@@ -178,7 +178,6 @@ def select_user_email_post():
 def fetch_project_number_get():
     return render_template('select_project_number.html')  # Updated template name
 
-
 # POST route to handle project number submission
 @app.route('/fetch_project_number_submit', methods=['POST'])
 def fetch_project_number_post():
@@ -238,6 +237,26 @@ def display_project_client_details():
     project = session.get('project_data', {})
     client = session.get('client_data', {})
     return render_template('display_project_client_details.html', project=project, client=client)
+
+#############################################################
+# app route to confirm project/client details storing them in the session and redirecting the user home
+@app.route('/confirm_project_details', methods=['POST'])
+def confirm_project_details():
+    # Retrieve project and client data from the session
+    project_data = session.get('project_data')
+    client_data = session.get('client_data')
+
+    if not project_data or not client_data:
+        flash("Project or Client data is missing. Please search for a project again.", 'error')
+        return redirect(url_for('fetch_project_number_get'))
+    
+    # Store confirmed project and client data in session
+    session['confirmed_project_data'] = project_data
+    session['confirmed_client_data'] = client_data
+
+    flash("Project and Client details confirmed and saved.", 'success')
+    return redirect(url_for('home'))
+
 
 #####################################################
 # app routes to search AHJ registry and Bing for amendments to build codes
@@ -379,7 +398,6 @@ def store_ahj_data():
     flash("AHJ data stored for export.")
     return redirect(url_for('home'))
 
-# performs the actual bing search for amendments
 @app.route('/search_amendments', methods=['POST'])
 def search_amendments():
     # Get the AHJ name from the session or address
@@ -387,7 +405,7 @@ def search_amendments():
     
     if not ahj_data:
         flash("No AHJ data found. Please go back and perform a new search.")
-        return redirect(url_for('fetch_ahj_address'))
+        return redirect(url_for('fetch_ahj_address_get'))
 
     # Get the AHJ name for querying amendments
     ahj_name = ahj_data[0]['AHJ Name'] if ahj_data else session.get('address')
@@ -396,21 +414,57 @@ def search_amendments():
     query = f"{ahj_name} Building Code Amendments"
     pdf_links, web_links = perform_bing_search(query)
 
+    # Store the amendment links in session for future use
+    session['amendment_pdf_links'] = pdf_links
+    session['amendment_web_links'] = web_links
+
     if not pdf_links and not web_links:
         flash("No amendments found.")
-        return redirect(url_for('fetch_ahj_address'))
+        return redirect(url_for('fetch_ahj_address_get'))
 
     # Render the results to the user
-    return render_template('amendments_results.html', pdf_links=pdf_links, web_links=web_links)
+    return render_template('display_amendment_results.html', pdf_links=pdf_links, web_links=web_links)
 
-# stores amendment pdf and website links for future use
 @app.route('/store_amendment_results', methods=['POST'])
 def store_amendment_results():
-    # Store both PDF and web links for export later
-    session['amendment_pdf_links'] = session.get('pdf_links')
-    session['amendment_web_links'] = session.get('web_links')
-    flash("Amendment data stored for export.")
+    # Retrieve AHJ data and amendment data from the session
+    ahj_data = session.get('ahj_data')
+    pdf_links = session.get('amendment_pdf_links')
+    web_links = session.get('amendment_web_links')
+
+    # Ensure AHJ data is available before storing
+    if not ahj_data:
+        flash("No AHJ data found. Please perform an AHJ search first.", 'error')
+        return redirect(url_for('fetch_ahj_address_get'))
+    
+    # Store both AHJ data and amendment data in session
+    session['stored_ahj_data'] = ahj_data
+    session['stored_amendment_pdf_links'] = pdf_links
+    session['stored_amendment_web_links'] = web_links
+    
+    flash("Both AHJ and amendment data stored for export.", 'success')
     return redirect(url_for('home'))
+
+###############################################################
+# app routes to handle exporting the project, client, AHJ, and amendment info fetched by the user to a csv/excel workbook
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 ##########################################
 # helper functions to get user sub for API calls

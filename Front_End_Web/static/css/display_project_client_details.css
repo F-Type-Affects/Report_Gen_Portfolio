@@ -49,13 +49,11 @@ h1 {
     margin: 4px 0;
 }
 
-.button-group {
-    display: flex;
-    justify-content: space-between;
-    margin-top: 25px;
+.button-group form {
+    display: inline;
 }
 
-button {
+.button-group button, .button-group form button {
     width: 48%;
     padding: 12px;
     background-color: #007ACC;
@@ -66,6 +64,11 @@ button {
     cursor: pointer;
     transition: background-color 0.3s;
 }
+
+.button-group button:hover, .button-group form button:hover {
+    background-color: #005F9E;
+}
+
 
 button:hover {
     background-color: #005F9E;
