@@ -170,7 +170,7 @@ def extract_project_details(project_data):
         project_data = project_data[0]
 
         project_details = {
-            'Project ID': project_data.get('code', ''),
+            'code': project_data.get('code', ''),
             'Project Name': project_data.get('name', ''),
             'Project PO#': project_data.get('purchaseOrderNumber', ''),
             'Billing Contact': project_data.get('billingContact', ''),

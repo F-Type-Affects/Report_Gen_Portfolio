@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Confirm Project Report Details</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/display_report_details.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h2>Confirm Project Report Details</h2>
+
+        <!-- Display Project Details -->
+        <h3>Project Details</h3>
+        <p><strong>Project ID:</strong> {{ project.code }}</p>
+        <p><strong>Project Name:</strong> {{ project.name }}</p>
+        <p><strong>Project PO #:</strong> {{ project.purchaseOrderNumber }}</p>
+        <p><strong>Project Address:</strong> {{ project.street1 }}, {{ project.street2 }}, {{ project.city }}, {{ project.state }}, {{ project.zip_code }}</p>
+
+        <!-- Display Client Details -->
+        <h3>Client Details</h3>
+        <p><strong>Client Name:</strong> {{ client.name }}</p>
+        <p><strong>Client Address:</strong> {{ client.street1 }}, {{ client.street2 }}, {{ client.city }}, {{ client.state }}, {{ client.zip_code }}</p>
+        <p><strong>Billing Contact:</strong> {{ client.billing_contact }}</p>
+        <p><strong>Phone:</strong> {{ client.phone }}</p>
+        <p><strong>Email:</strong> {{ client.email }}</p>
+
+        <!-- Display AHJ Registry Info -->
+        <h3>AHJ Registry</h3>
+        {% for ahj in ahj_data %}
+            <p><strong>AHJ Name:</strong> {{ ahj['AHJ Name'] }}</p>
+            <p><strong>Building Code:</strong> {{ ahj['Building Code'] }}</p>
+        {% endfor %}
+
+        <!-- Display Amendment PDF Links -->
+        <h3>Amendment PDF Links</h3>
+        <ul>
+            {% for pdf_link in amendment_pdf_links %}
+                <li><a href="{{ pdf_link }}" target="_blank">{{ pdf_link }}</a></li>
+            {% endfor %}
+        </ul>
+
+        <!-- Display Amendment Web Links -->
+        <h3>Amendment Web Links</h3>
+        <ul>
+            {% for web_link in amendment_web_links %}
+                <li><a href="{{ web_link }}" target="_blank">{{ web_link }}</a></li>
+            {% endfor %}
+        </ul>
+
+        <!-- Action Buttons -->
+        <div class="button-group">
+            <!-- Home Button -->
+            <button onclick="window.location.href='{{ url_for('home') }}'" class="btn back-btn">Home</button>
+
+            <!-- Save Report Button -->
+            <form method="POST" action="{{ url_for('export_report_post') }}">
+                <button type="submit" class="btn save-btn">Save Report</button>
+            </form>
+        </div>
+
+        <!-- Loading indicator -->
+        <div id="loading-indicator" style="display:none;">
+            <p>Saving report, please wait...</p>
+        </div>
+
+        <!-- JavaScript to show loading indicator on submit -->
+        <script>
+            document.querySelector('.save-btn').addEventListener('click', function() {
+                document.getElementById('loading-indicator').style.display = 'block';
+            });
+        </script>
+    </div>
+</body>
+</html>

@@ -1,71 +1,60 @@
 import openpyxl
 import datetime
 import openpyxl
+import os
+from . import config
 from openpyxl.utils import get_column_letter
-from openpyxl.styles import Font
+from openpyxl.styles import Font, PatternFill
+
+# Base directory for Jobs
+BASE_DIR = config.REPORT_DIRECTORY
 
 def create_workbook():
     # Create a new Excel workbook and active worksheet
     workbook = openpyxl.Workbook()
     sheet = workbook.active
 
-    # Define column headers
-    headers = [
-        "Project ID", "Project Name", "Project PO #", "Project Address", "Client",
-        "Client Address", "Billing Contact", "AHJ Jurisdiction", "Amendment PDF Links", "Amendment Web Links",
-        "Street 1", "Street 2", "City", "State", "Zip", "Phone", "Email"
-    ]
+    # Define and insert headers directly into specified cells
+    headers = {
+        'A1': "Project ID:", 'A2': "Project Name:", 'A3': "Project PO #:", 'A4': "Project Address:",
+        'A6': "Client:", 'A7': "Client Address:", 'A9': "Billing Contact:", 'A10': "Phone:", 'A11': "Email:",
+        'B4': "Street 1", 'C4': "Street 2", 'D4': "City", 'E4': "State", 'F4': "Zip",
+        'B7': "Street 1", 'C7': "Street 2", 'D7': "City", 'E7': "State", 'F7': "Zip",
+        'H1': "AHJ Jurisdiction:", 'I1': "AHJ Building Codes:", 'J1': "Amendment PDF Links:", 'K1': "Amendment Web Links:"
+    }
 
-    # Insert headers into the first row
-    for col, header in enumerate(headers, start=1):
-        sheet.cell(row=1, column=col, value=header)
-    
-    sheet['A1'] = "Project ID:"
-    sheet['A2'] = "Project Name:"
-    sheet['A3'] = "Project PO #:"
-    sheet['A4'] = "Project Address:"
-    sheet['A6'] = "Client:"
-    sheet['A7'] = "Client Address:"
-    sheet['A9'] = "Billing Contact:"
-    sheet['A10'] = "Phone:"
-    sheet['A11'] = "Email:"
-    sheet['B4'] = "Street 1"
-    sheet['C4'] = "Street 2"
-    sheet['D4'] = "City"
-    sheet['E4'] = "State"
-    sheet['F4'] = "Zip"
-    sheet['B7'] = "Street 1"
-    sheet['C7'] = "Street 2"
-    sheet['D7'] = "City"
-    sheet['E7'] = "State"
-    sheet['F7'] = "Zip"
-    sheet['H1'] = "AHJ Jurisdiction:"
-    sheet['H6'] = "Amendment PDF Links:"
-    sheet['H17'] = "Amendment Web Links:"
-    
+    for cell, header in headers.items():
+        sheet[cell] = header
+        # Set header cells to bold with background color
+        sheet[cell].font = Font(bold=True)
+        sheet[cell].fill = PatternFill(start_color="D9D9D9", end_color="D9D9D9", fill_type="solid")  # Light grey fill
+
     return workbook
+
 
 def insert_project_data(sheet, project):
     # Insert project data into the designated cells
-    sheet['B1'] = project.code
-    sheet['B2'] = project.name
-    sheet['B3'] = project.purchaseOrderNumber
-    sheet['B5'] = project.street1
-    sheet['C5'] = project.street2
-    sheet['D5'] = project.city
-    sheet['E5'] = project.state
-    sheet['F5'] = project.zip_code
+    sheet['B1'] = project.get('code', '')  # Use get method to safely access keys
+    sheet['B2'] = project.get('name', '')
+    sheet['B3'] = project.get('purchase_order_number', '')
+    sheet['B5'] = project.get('street1', '')
+    sheet['C5'] = project.get('street2', '')
+    sheet['D5'] = project.get('city', '')
+    sheet['E5'] = project.get('state', '')
+    sheet['F5'] = project.get('zip_code', '')
+
 
 def insert_client_data(sheet, client):
     # Insert client data into the designated cells
-    sheet['B6'] = client.name
-    sheet['B8'] = client.street1
-    sheet['C8'] = client.street2
-    sheet['D8'] = client.city
-    sheet['E8'] = client.state
-    sheet['F8'] = client.zip_code
-    sheet['B10'] = client.phone
-    sheet['B11'] = client.email
+    sheet['B6'] = client.get('client_name', '')
+    sheet['B8'] = client.get('street1', '')
+    sheet['C8'] = client.get('street2', '')
+    sheet['D8'] = client.get('city', '')
+    sheet['E8'] = client.get('state', '')
+    sheet['F8'] = client.get('zip_code', '')
+    sheet['B10'] = client.get('client_phone', '')
+    sheet['B11'] = client.get('client_email', '')
+
     
 
 def auto_adjust_column_width(sheet):
@@ -88,51 +77,101 @@ def auto_adjust_column_width(sheet):
         adjusted_width = (max_length + 2)
         sheet.column_dimensions[col_letter].width = adjusted_width
 
-
 def insert_ahj_data(sheet, ahj_info, amendment_data):
     """
-    Inserts AHJ and amendment data starting from row 5.
+    Inserts AHJ and amendment data into columns H, I, J, and K starting from row 2.
     Args:
         sheet: The active sheet of the workbook.
-        ahj_info: A list of dictionaries containing AHJ data with keys 'AHJ Name' and 'Building Code'.
-        amendments: A list of amendment URLs corresponding to AHJ names.
+        ahj_info: A list of dictionaries containing AHJ data.
+        amendment_data: A dictionary with lists for 'pdf_links' and 'web_links' keys.
     """
-    row_start = 5
-    max_length = max(len(ahj_info), len(amendment_data)) # use which ever length is longer
-    
-    for i in range(max_length):
-        ahj_name = ahj_info[i]['AHJ Name'] if i < len(ahj_info) else ''
-        building_code = ahj_info[i]['Building Code'] if i < len(ahj_info) else ''
-        amendment_url = amendment_data[i] if i < len(amendment_data) else ''
-        
-        sheet[f'A{row_start + i}'] = ahj_name
-        sheet[f'B{row_start + i}'] = building_code
-        
-        if amendment_url:
-            amendment_name = amendment_url.split('/')[-1]
-            
-            # Insert hyperlink for the amendment
-            sheet.cell(row=row_start + i, column=3).hyperlink = amendment_url
-            sheet.cell(row=row_start + i, column=3).value = amendment_name
-            sheet.cell(row=row_start + i, column=3).font = Font(color="0000FF", underline="single")  # Make it look like a hyperlink
+    # Insert AHJ jurisdiction and building codes in columns H and I
+    for row, ahj in enumerate(ahj_info, start=2):
+        sheet[f'H{row}'] = ahj.get('AHJ Name', '')
+        sheet[f'I{row}'] = ahj.get('Building Code', '')
 
-def save_workbook(workbook, full_path):
+    # Insert Amendment PDF Links in column J
+    for row, pdf_link in enumerate(amendment_data.get('pdf_links', []), start=2):
+        pdf_name = pdf_link.split('/')[-1]
+        cell = sheet.cell(row=row, column=10)  # Column J is the 10th column
+        cell.hyperlink = pdf_link
+        cell.value = pdf_name
+        cell.font = Font(color="0000FF", underline="single")  # Blue font to mimic a hyperlink
+
+    # Insert Amendment Web Links in column K
+    for row, web_link in enumerate(amendment_data.get('web_links', []), start=2):
+        web_name = web_link.split('/')[-1]
+        cell = sheet.cell(row=row, column=11)  # Column K is the 11th column
+        cell.hyperlink = web_link
+        cell.value = web_name
+        cell.font = Font(color="0000FF", underline="single")  # Blue font to mimic a hyperlink
+
+
+def save_workbook(workbook, project_code):
     """
-    Saves the workbook to the specified full path.
+    Saves the workbook to the appropriate directory based on project code.
 
     Args:
-        workbook: The openpyxl workbook object.
-        full_path: The full file path where the workbook should be saved.
+        workbook (Workbook): The openpyxl workbook object.
+        project_code (str): Project code to determine the save path.
+
+    Returns:
+        str: The full path of the saved workbook, or None if save failed.
     """
+    # Find the project directory based on the project code
+    project_dir = find_project_directory(project_code)
+    if not project_dir:
+        print("Project directory not found; workbook not saved.")
+        return None
+
+    # Define the AHJ_REPORT directory within the project folder
+    ahj_report_dir = os.path.join(project_dir, "AHJ_REPORT")
+    if not os.path.exists(ahj_report_dir):
+        os.makedirs(ahj_report_dir)  # Create the directory if it doesn't exist
+
+    # Create the filename with timestamp
+    filename = f"AHJ_Report_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+    full_path = os.path.join(ahj_report_dir, filename)
+
+    # Save the workbook
     try:
-        sheet = workbook.active
-        
-        auto_adjust_column_width(sheet)
-        
         workbook.save(full_path)
-        
+        print(f"Workbook successfully saved at {full_path}")
         return full_path
     except Exception as e:
         print(f"Failed to save workbook: {e}")
         return None
 
+def find_project_directory(project_code):
+    """
+    Finds the project directory based on the project code format.
+    
+    Args:
+        project_code (str): Project code in format "yy-code" (new) or "code-yy" (old).
+        
+    Returns:
+        str: Path to the project directory if it exists, or None if not found.
+    """
+    # Determine year and code
+    if len(project_code) == 7 and project_code[2] == '-':  # Format "yy-code"
+        year, code = project_code[:2], project_code[3:]
+        year = "20" + year  # Convert yy to yyyy format
+    elif len(project_code) == 8 and project_code[4] == '-':  # Format "code-yy"
+        code, year = project_code[:4], project_code[5:]
+        year = "20" + year  # Convert yy to yyyy format
+    else:
+        print("Invalid project code format")
+        return None
+
+    # Construct path based on year and formatted project code
+    year_folder = f"Jobs {year}"
+    project_folder_name = f"{int(code):03d}-{year[-2:]}"  # Format to "xxx-yy"
+    project_directory = os.path.join(BASE_DIR, year_folder)
+
+    # Search for the matching project directory within the year's directory
+    for dir_name in os.listdir(project_directory):
+        if dir_name.startswith(project_folder_name):
+            return os.path.join(project_directory, dir_name)
+    
+    print(f"Project directory not found for project code: {project_code}")
+    return None

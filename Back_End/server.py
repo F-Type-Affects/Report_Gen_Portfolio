@@ -20,7 +20,7 @@ from .models import Project, Client
 from . import config
 from .ahj_manager import search_ahj_registry, perform_bing_search
 from .create_project import get_clients_by_name, get_employees, fetch_manager_id, send_create_project_request
-from .export_project_details import create_workbook, insert_project_data, insert_client_data, save_workbook, insert_ahj_data
+from .export_project_details import create_workbook, insert_project_data, insert_client_data, insert_ahj_data, save_workbook
 
 app = Flask(__name__,template_folder='../Front_End_Web/templates', static_folder='../Front_End_Web/static')
 
@@ -38,7 +38,7 @@ app.config['SESSION_REDIS'] = Redis(host='127.0.0.1', port=6379)  # Connect to y
 Session(app)
 
 # Configure logging
-logging.basicConfig(level=logging.WARNING)
+logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 # Set up database
@@ -205,7 +205,7 @@ def fetch_project_number_post():
     
     # Store project and client details in the session for use on the details page
     session['project_data'] = {
-        'project_number': project_number,
+        'code': project_number,
         'name': project.name,
         'purchase_order_number': project.purchase_order_number,
         'billing_contact': project.billing_contact,
@@ -448,22 +448,60 @@ def store_amendment_results():
 ###############################################################
 # app routes to handle exporting the project, client, AHJ, and amendment info fetched by the user to a csv/excel workbook
 
+@app.route('/display_report_details', methods=['GET'])
+def display_report_details_get():
+    # Retrieve all necessary data from the session
+    project = session.get('confirmed_project_data', {})
+    client = session.get('confirmed_client_data', {})
+    ahj_data = session.get('stored_ahj_data', [])
+    amendment_pdf_links = session.get('stored_amendment_pdf_links', [])
+    amendment_web_links = session.get('stored_amendment_web_links', [])
 
+    return render_template(
+        'display_report_details.html',
+        project=project,
+        client=client,
+        ahj_data=ahj_data,
+        amendment_pdf_links=amendment_pdf_links,
+        amendment_web_links=amendment_web_links
+    )
 
+# exports the data and saves it in an excel workbook in the jobs directory
+@app.route('/export_report', methods=['POST'])
+def export_report_post():
+    # Retrieve data from the session
+    project_data = session.get('confirmed_project_data')  # updated key
+    client_data = session.get('confirmed_client_data')    # updated key
+    ahj_data = session.get('stored_ahj_data')
+    amendments = {
+        "pdf_links": session.get('stored_amendment_pdf_links', []),
+        "web_links": session.get('stored_amendment_web_links', [])
+    }
 
+    # Verify project_data and client_data are available
+    if not project_data or not client_data:
+        flash("Missing project or client data. Please confirm details again.", 'error')
+        return redirect(url_for('display_report_details_get'))
 
+    # Create workbook and insert data
+    workbook = create_workbook()
+    sheet = workbook.active
+    
+    # Debug log for project_data
+    logger.debug(f"Project data contents: {project_data}")
+    
+    insert_project_data(sheet, project_data)
+    insert_client_data(sheet, client_data)
+    insert_ahj_data(sheet, ahj_data, amendments)
 
-
-
-
-
-
-
-
-
-
-
-
+    # Save the workbook and provide feedback
+    saved_path = save_workbook(workbook, project_data['code'])  # Use project number or other identifier
+    if saved_path:
+        flash(f"Workbook successfully saved at {saved_path}", 'success')
+        return redirect(url_for('home'))
+    else:
+        flash("Failed to save workbook. Please try again.", 'error')
+        return redirect(url_for('display_report_details_get'))
 
 
 ##########################################
