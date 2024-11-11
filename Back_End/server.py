@@ -1,15 +1,9 @@
 import logging
 import os
-import webbrowser
-import threading
-import subprocess
-from flask import Flask, redirect, request, session, jsonify
-from flask import render_template, redirect, url_for
-from flask import flash
+import time
+from flask import Flask, redirect, request, session, jsonify, render_template, url_for, flash
 from flask_session import Session
 from redis import Redis
-import requests
-import time
 from datetime import timedelta
 
 from .auth import get_authorization_url, exchange_code_for_token, decode_id_token, get_user_info
@@ -22,23 +16,23 @@ from .ahj_manager import search_ahj_registry, perform_bing_search
 from .create_project import get_clients_by_name, get_employees, fetch_manager_id, send_create_project_request
 from .export_project_details import create_workbook, insert_project_data, insert_client_data, insert_ahj_data, save_workbook
 
-app = Flask(__name__,template_folder='../Front_End_Web/templates', static_folder='../Front_End_Web/static')
+app = Flask(__name__, template_folder='../Front_End_Web/templates', static_folder='../Front_End_Web/static')
 
-# app configuartion
-app.config['DEBUG'] = False
+# app configuration
+app.config['DEBUG'] = False  # Ensure debugging is off for production
 app.config['SECRET_KEY'] = config.APP_KEY  # Securely generate and store this
 app.config['SESSION_TYPE'] = 'redis'
 app.config['SESSION_PERMANENT'] = False  # Set to False so the session expires when the user closes the app
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=30)
 app.config['SESSION_USE_SIGNER'] = True  # Encrypt session cookies for extra security
 app.config['SESSION_KEY_PREFIX'] = 'sml_report_gen:'  # Optional prefix to help distinguish session keys in Redis
-app.config['SESSION_REDIS'] = Redis(host='127.0.0.1', port=6379)  # Connect to your local Redis instance
+app.config['SESSION_REDIS'] = Redis(host='127.0.0.1', port=6379)  # Connect to your Redis instance on the server
 
-# setup sessions with redis
+# Set up sessions with Redis
 Session(app)
 
 # Configure logging
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)  # Adjust to INFO for production
 logger = logging.getLogger(__name__)
 
 # Set up database
@@ -523,6 +517,10 @@ def exit_app():
     flash("You have been logged out. Session data cleared.")
     return redirect(url_for('home'))
 
+
+###############################################################
+# comented out launch logic and entry point since in production this will be handled by Gunicorn and NGISX
+"""
 # should launch app in its own browser
 # is not working
 def open_browser():
@@ -548,3 +546,5 @@ if __name__ == '__main__':
     threading.Thread(target=open_browser).start()
     # Launch the Flask app
     app.run(port=8000, use_reloader=False)
+
+"""
