@@ -2,11 +2,10 @@ requests
 python-dotenv
 openpyxl
 flask
-requests
 pyjwt
 authlib
 Flask-Session
-PyQt5
 selenium
 pandas
 duckduckgo-search
+redis
