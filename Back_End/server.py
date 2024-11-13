@@ -517,10 +517,9 @@ def exit_app():
     flash("You have been logged out. Session data cleared.")
     return redirect(url_for('home'))
 
-
+"""
 ###############################################################
 # comented out launch logic and entry point since in production this will be handled by Gunicorn and NGISX
-"""
 # should launch app in its own browser
 # is not working
 def open_browser():
@@ -546,5 +545,4 @@ if __name__ == '__main__':
     threading.Thread(target=open_browser).start()
     # Launch the Flask app
     app.run(port=8000, use_reloader=False)
-
-"""
+    """
