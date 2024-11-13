@@ -4,11 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Consulting Structural & Forensic Engineers</title>
-    <link rel="stylesheet" href="../static/css/index_styling.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/index_styling.css') }}">
 </head>
 <body>
     <header>
-        <img src="../static/images/landing_banner.jpg" alt="Consulting Structural & Forensic Engineers" class="banner">
+        <img src="/static/images/landing_banner.jpg" alt="Consulting Structural & Forensic Engineers" class="banner">
     </header>
     <!-- Display Flash Messages -->
     {% with messages = get_flashed_messages() %}
