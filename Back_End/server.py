@@ -16,7 +16,7 @@ from .ahj_manager import search_ahj_registry, perform_bing_search
 from .create_project import get_clients_by_name, get_employees, fetch_manager_id, send_create_project_request
 from .export_project_details import create_workbook, insert_project_data, insert_client_data, insert_ahj_data, save_workbook
 
-app = Flask(__name__, template_folder='../Front_End_Web/templates', static_folder='../Front_End_Web/static')
+app = Flask(__name__, static_folder="Front_End_Web/static", template_folder="Front_End_Web/templates")
 
 # app configuration
 app.config['DEBUG'] = False  # Ensure debugging is off for production
