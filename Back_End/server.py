@@ -5,6 +5,7 @@ from flask import Flask, redirect, request, session, jsonify, render_template, u
 from flask_session import Session
 from redis import Redis
 from datetime import timedelta
+import requests
 
 from .auth import get_authorization_url, exchange_code_for_token, decode_id_token, get_user_info
 from .database import setup_database, get_all_emails
