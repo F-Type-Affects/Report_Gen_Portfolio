@@ -145,10 +145,11 @@ def save_workbook(workbook, project_code):
 def find_project_directory(project_code):
     """
     Finds the project directory based on the project code format.
-    
+    Handles nested structure where yearly folders are prefixed with 'Jobs'.
+
     Args:
         project_code (str): Project code in format "yy-code" (new) or "code-yy" (old).
-        
+
     Returns:
         str: Path to the project directory if it exists, or None if not found.
     """
@@ -163,15 +164,27 @@ def find_project_directory(project_code):
         print("Invalid project code format")
         return None
 
-    # Construct path based on year and formatted project code
-    year_folder = f"Jobs {year}"
-    project_folder_name = f"{int(code):03d}-{year[-2:]}"  # Format to "xxx-yy"
-    project_directory = os.path.join(BASE_DIR, year_folder)
+    # Construct the path to the yearly folder (e.g., '/mnt/projects/Jobs/Jobs YYYY')
+    year_folder = f"Jobs {year}"  # e.g., 'Jobs 2024'
+    project_folder_name = f"{int(code):03d}-{year[-2:]}"  # Format to 'xxx-yy'
+    year_directory = os.path.join(BASE_DIR, "Jobs", year_folder)
+
+    # Ensure the yearly folder exists
+    if not os.path.exists(year_directory):
+        print(f"Year folder not found: {year_directory}")
+        return None
 
     # Search for the matching project directory within the year's directory
-    for dir_name in os.listdir(project_directory):
-        if dir_name.startswith(project_folder_name):
-            return os.path.join(project_directory, dir_name)
-    
+    try:
+        for dir_name in os.listdir(year_directory):
+            if dir_name.startswith(project_folder_name):
+                return os.path.join(year_directory, dir_name)
+    except FileNotFoundError:
+        print(f"Year folder not found: {year_directory}")
+        return None
+    except Exception as e:
+        print(f"Error accessing project directory: {e}")
+        return None
+
     print(f"Project directory not found for project code: {project_code}")
     return None
