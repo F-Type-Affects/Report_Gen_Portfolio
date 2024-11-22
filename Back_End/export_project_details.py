@@ -168,7 +168,10 @@ def find_project_directory(project_code):
     year_folder = f"Jobs {year}"  # e.g., 'Jobs 2024'
     project_folder_name = f"{int(code):03d}-{year[-2:]}"  # Format to 'xxx-yy'
     year_directory = os.path.join(BASE_DIR, "Jobs", year_folder)
-
+    
+     # Debug: Log the constructed year folder path
+    print(f"Constructed year folder path: {year_directory}")
+    
     # Ensure the yearly folder exists
     if not os.path.exists(year_directory):
         print(f"Year folder not found: {year_directory}")
