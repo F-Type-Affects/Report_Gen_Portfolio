@@ -19,8 +19,8 @@ from .export_project_details import create_workbook, insert_project_data, insert
 
 app = Flask(
 	__name__,
-	static_folder="/home/frank/SML_Reports_Test/SML_Report_Gen/Front_End_Web/static",
-	template_folder="/home/frank/SML_Reports_Test/SML_Report_Gen/Front_End_Web/templates"
+	static_folder="C:\\Users\\fstranathan\\Desktop\\SML_Reports_Test\\Front_End_Web\\static",
+	template_folder="C:\\Users\\fstranathan\\Desktop\\SML_Reports_Test\\Front_End_Web\\templates"
 )
 
 # app configuration
@@ -103,6 +103,8 @@ def callback():
         user_info = get_user_info(access_token)
         if not user_info:
             return "Failed to retrieve user info.", 500
+        
+        print("User Info: ", user_info)
         
         #adjust expires_in to absolute time
         current_time = int(time.time())
@@ -522,7 +524,7 @@ def exit_app():
     flash("You have been logged out. Session data cleared.")
     return redirect(url_for('home'))
 
-"""
+
 ###############################################################
 # comented out launch logic and entry point since in production this will be handled by Gunicorn and NGISX
 # should launch app in its own browser
@@ -546,8 +548,5 @@ def open_browser():
 
 # entry point
 if __name__ == '__main__':
-    # Start the browser-opening function in a separate thread
-    threading.Thread(target=open_browser).start()
     # Launch the Flask app
-    app.run(port=8000, use_reloader=False)
-    """
+    app.run(host='127.0.0.1', port=8000, debug=True)
