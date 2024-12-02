@@ -6,12 +6,11 @@ import requests
 import logging
 from .token_manager import refresh_access_token, get_valid_access_token, fetch_access_token, fetch_access_token_by_email
 from .database import get_sub_by_email
-from . import config
+from .config import get_config
 
-# Configure logging
-logging.basicConfig(level=logging.WARNING)
+config = get_config()
+
 logger = logging.getLogger(__name__)
-
 
 # get project base URL
 client_base_url = config.CLIENT_BASE_URL
@@ -27,8 +26,10 @@ def get_project_by_code(project_code, selected_email):
         dict: project data retrieved from API
     """
     # get user sub
+    logger.info(f"Fetching project with code: {project_code} for user: {selected_email}")
     user_sub = get_sub_by_email(selected_email)
     if not user_sub:
+        logger.error(f"No user found for the given email: {selected_email}")
         raise Exception("No user found for the given email")
     
     
@@ -50,17 +51,21 @@ def get_project_by_code(project_code, selected_email):
     conn = http.client.HTTPSConnection(parsed_url.hostname)
 
     try:
+        logger.debug(f"Sending GET request to {request_path}")
         conn.request("GET", request_path, headers=headers)
         res = conn.getresponse()
         data = res.read()
+        logger.debug(f"Response status: {res.status}")
         if res.status == 200:
             return json.loads(data.decode("utf-8"))
         else:
+            logger.warning(f"Failed to fetch project. Status: {res.status}")
             return None
     except http.client.HTTPException as e:
-        print("HTTP error occurred:", e)
+        logger.error(f"HTTP error occurred while fetching project: {e}")
     finally:
         conn.close()
+        logger.debug("Connection closed.")
 
 # extract the client id number from the project object list in order to retrieve the correct client object
 def extract_client_id(project_data):
@@ -77,8 +82,10 @@ def extract_client_id(project_data):
         # take first item in list
         # Extract client id from first item
         client_id = project_data[0]['clientId']
+        logger.info(f"Extracted client ID: {client_id}")
         return client_id
     except (IndexError, KeyError, TypeError) as e:
+        logger.error(f"Error extracting client ID: {e}")
         return None
 
 # Retrieve Client Object from BQE Endpoint which contains client name and address        
@@ -91,8 +98,10 @@ def get_client_by_id(client_id, selected_email):
     Returns:
         dict: client information retrieved from API
     """
+    logger.info(f"Fetching client with ID: {client_id}")
     user_sub = get_sub_by_email(selected_email)
     if not user_sub:
+        logger.error(f"No user found for the given email: {selected_email}")
         raise Exception("No user found for the given email")
     
     client_base_url = config.CLIENT_BASE_URL
@@ -114,18 +123,21 @@ def get_client_by_id(client_id, selected_email):
     conn = http.client.HTTPSConnection(parsed_url.hostname)
     
     try:
+        logger.debug(f"Sending GET request to {request_path}")
         conn.request("GET", request_path, headers=headers)
         res = conn.getresponse()
         data = res.read()
-        
+        logger.debug(f"Response status: {res.status}")
         if res.status == 200:
             return json.loads(data.decode("utf-8"))
         else:
+            logger.warning(f"Failed to fetch client. Status: {res.status}")
             return None
     except http.client.HTTPException as e:
-        print("HTTP error occurred: ", e)
+        logger.error(f"HTTP error occurred while fetching client: {e}")
     finally:
         conn.close()
+        logger.debug("Connection closed.")
 
 # extract the specefic project address from the list of projects
 def extract_project_address(project_data):
@@ -149,10 +161,11 @@ def extract_project_address(project_data):
             'State': address.get('state', ''),
             'Zip': address.get('zip', ''),
         }
+        logger.info(f"Extracted project address: {address_details}")
         return address_details
 
     except Exception as e:
-        print(f"Error extracting project address: {e}")
+        logger.error(f"Error extracting project address: {e}")
         return {}
 
 # extract the specefic project details from the list
@@ -175,10 +188,10 @@ def extract_project_details(project_data):
             'Project PO#': project_data.get('purchaseOrderNumber', ''),
             'Billing Contact': project_data.get('billingContact', ''),
         }
-        
+        logger.info(f"Extracted project details: {project_details}")
         return project_details
     except Exception as e:
-        print(f"Error extracting project details: {e}")
+        logger.error(f"Error extracting project details: {e}")
         return {}
 
 # extract the client address
@@ -203,9 +216,11 @@ def extract_client_address(client_data):
             'State': address.get('state', ''),
             'Zip': address.get('zip', ''),
         }
+        logger.info(f"Extracted client address: {address_details}")
         return address_details
     
     except Exception as e:
+        logger.error(f"Error extracting client address: {e}")
         return {}
 
 # extract the relevant client details
@@ -225,9 +240,9 @@ def extract_client_details(client_data):
         client_details = {
             'Client Name': details.get('name', ''),
         }
-        
+        logger.info(f"Extracted client details: {client_details}")
         return client_details
     except Exception as e:
-        print(f"Error extracting client details: {e}")
+        logger.error(f"Error extracting client details: {e}")
         return {}
     

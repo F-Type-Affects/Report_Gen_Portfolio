@@ -1,11 +1,12 @@
 import sqlite3
 import logging
 import os
-from . import config
+from .config import get_config
+
+config = get_config()
 
 DATABASE_PATH = config.DATABASE_PATH
 
-logging.basicConfig(level=logging.WARNING)
 logger = logging.getLogger(__name__)
 
 def setup_database(db_path):
@@ -17,6 +18,9 @@ def setup_database(db_path):
             CREATE TABLE IF NOT EXISTS tokens (
                 sub TEXT PRIMARY KEY,
                 email TEXT,
+                first_name TEXT,
+                last_name TEXT,
+                user_id TEXT,
                 id_token TEXT,
                 access_token TEXT,
                 expires_in INTEGER,
@@ -27,21 +31,22 @@ def setup_database(db_path):
         ''')
         conn.commit()
         conn.close()
-        logger.info("Database created and initialized")
+        logger.info("Database created and initialized with new schema")
     else:
         logger.info(f"Database already exists")
 
-def insert_token_data(sub, email, id_token, access_token, expires_in, token_type, refresh_token, refresh_token_expires_in):
+def insert_token_data(sub, email, first_name, last_name, user_id, id_token, access_token, expires_in, token_type, refresh_token, refresh_token_expires_in):
     """
     Inserts a new set of token data into the database.
     """
     query = '''
-        INSERT INTO tokens (sub, email, id_token, access_token, expires_in, token_type, refresh_token, refresh_token_expires_in)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO tokens (sub, email, first_name, last_name, user_id, id_token, access_token, expires_in, token_type, refresh_token, refresh_token_expires_in)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     '''
-    params = (sub, email, id_token, access_token, expires_in, token_type, refresh_token, refresh_token_expires_in)
+    params = (sub, email, first_name, last_name, user_id, id_token, access_token, expires_in, token_type, refresh_token, refresh_token_expires_in)
     execute_query(query, params)
-    logger.debug(f"New token data inserted")
+    logger.debug("New token data with user info inserted")
+
 
 def update_token_data(sub, access_token, expires_in, refresh_token, refresh_token_expires_in):
     """
@@ -124,3 +129,35 @@ def get_all_tokens_data():
     except sqlite3.Error as e:
         print(f"Failed to retrieve token data: {e}")
         return []
+
+def print_all_tokens():
+    """
+    Fetches and logs all records from the tokens table for verification purposes.
+    """
+    try:
+        tokens = get_all_tokens_data()
+        if not tokens:
+            logger.info("No tokens found in the database.")
+            return
+        logger.info("Current contents of the tokens table:")
+        for token in tokens:
+            # token is a tuple corresponding to the columns in the table
+            (
+                sub,
+                email,
+                first_name,
+                last_name,
+                user_id,
+                id_token,
+                access_token,
+                expires_in,
+                token_type,
+                refresh_token,
+                refresh_token_expires_in
+            ) = token
+            logger.info(f"Sub: {sub}, Email: {email}, First Name: {first_name}, Last Name: {last_name}, User ID: {user_id}, "
+                        f"ID Token: {id_token}, Access Token: {access_token}, Expires In: {expires_in}, "
+                        f"Token Type: {token_type}, Refresh Token: {refresh_token}, "
+                        f"Refresh Token Expires In: {refresh_token_expires_in}")
+    except Exception as e:
+        logger.error(f"Error printing tokens: {e}")

@@ -8,12 +8,21 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from . import config
+from .config import get_config
+
+config = get_config()
 
 logger = logging.getLogger(__name__)
 
 # Initialize web driver for Selenium to search AHJ registry
 def init_driver():
+    """
+    Initializes a headless Chrome WebDriver with custom options.
+    Returns:
+        WebDriver: Configured Selenium WebDriver instance.
+    """
+    logger.info("Initializing Selenium WebDriver.")
+    
     chrome_options = webdriver.ChromeOptions()
     chrome_options.add_argument("--headless")
     chrome_options.add_argument("--start-fullscreen")
@@ -24,44 +33,59 @@ def init_driver():
 
 # Function to search AHJ registry
 def search_ahj_registry(address):
+    logger.info(f"Starting AHJ registry search for address: {address}")
     email = config.LOGIN
     pw = config.PW
     driver = init_driver()
-    driver.get('https://ahjregistry.myorangebutton.com/#/ahj-search')
+    
+    try:
+        driver.get('https://ahjregistry.myorangebutton.com/#/ahj-search')
+        logger.debug("Navigated to AHJ registry website.")
 
-    WebDriverWait(driver, 20).until(EC.element_to_be_clickable((By.XPATH, '//*[@id="login-btn"]')))
-    driver.find_element(By.XPATH, '//*[@id="login-btn"]').click()
+        WebDriverWait(driver, 20).until(EC.element_to_be_clickable((By.XPATH, '//*[@id="login-btn"]')))
+        driver.find_element(By.XPATH, '//*[@id="login-btn"]').click()
+        logger.debug("Clicked login button.")
 
-    WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.XPATH, '/html/body/div[2]/div[1]/div/div/div/div/div/div/form/div/div[1]/input')))
-    driver.find_element(By.XPATH, '/html/body/div[2]/div[1]/div/div/div/div/div/div/form/div/div[1]/input').send_keys(email)
-    driver.find_element(By.XPATH, '/html/body/div[2]/div[1]/div/div/div/div/div/div/form/div/div[2]/input').send_keys(pw)
-    driver.find_element(By.XPATH, '/html/body/div[2]/div[1]/div/div/div/div/div/div/form/div/button').click()
+        WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.XPATH, '/html/body/div[2]/div[1]/div/div/div/div/div/div/form/div/div[1]/input')))
+        driver.find_element(By.XPATH, '/html/body/div[2]/div[1]/div/div/div/div/div/div/form/div/div[1]/input').send_keys(email)
+        driver.find_element(By.XPATH, '/html/body/div[2]/div[1]/div/div/div/div/div/div/form/div/div[2]/input').send_keys(pw)
+        driver.find_element(By.XPATH, '/html/body/div[2]/div[1]/div/div/div/div/div/div/form/div/button').click()
+        logger.info("Logged into AHJ registry.")
 
-    WebDriverWait(driver, 20).until(EC.element_to_be_clickable((By.XPATH, '//*[@id="login-modal___BV_modal_header_"]/button')))
-    driver.find_element(By.XPATH, '//*[@id="login-modal___BV_modal_header_"]/button').click()
+        WebDriverWait(driver, 20).until(EC.element_to_be_clickable((By.XPATH, '//*[@id="login-modal___BV_modal_header_"]/button')))
+        driver.find_element(By.XPATH, '//*[@id="login-modal___BV_modal_header_"]/button').click()
+        logger.debug("Closed login modal.")
 
-    WebDriverWait(driver, 20).until_not(EC.presence_of_element_located((By.XPATH, '//*[@id="login-modal___BV_modal_header_"]/button')))
-    search_box = driver.find_element(By.XPATH, '//*[@id="search-bar-input"]')
-    search_box.send_keys(address)
-    search_box.send_keys(Keys.RETURN)
+        WebDriverWait(driver, 20).until_not(EC.presence_of_element_located((By.XPATH, '//*[@id="login-modal___BV_modal_header_"]/button')))
+        search_box = driver.find_element(By.XPATH, '//*[@id="search-bar-input"]')
+        search_box.send_keys(address)
+        search_box.send_keys(Keys.RETURN)
+        logger.info("Entered address and initiated search.")
 
-    WebDriverWait(driver, 20).until_not(EC.text_to_be_present_in_element((By.XPATH, '/html/body/div/div/div[3]/div[2]/div/table/tbody'), 'Loading...'))
-    table = driver.find_element(By.XPATH, '/html/body/div/div/div[3]/div[2]/div/table')
-    rows = table.find_elements(By.TAG_NAME, 'tr')
+        WebDriverWait(driver, 20).until_not(EC.text_to_be_present_in_element((By.XPATH, '/html/body/div/div/div[3]/div[2]/div/table/tbody'), 'Loading...'))
+        table = driver.find_element(By.XPATH, '/html/body/div/div/div[3]/div[2]/div/table')
+        rows = table.find_elements(By.TAG_NAME, 'tr')
 
-    table_data = []
-    for row in rows:
-        cols = row.find_elements(By.TAG_NAME, 'td')
-        if len(cols) > 0:
-            table_data.append([col.text for col in cols])
-    driver.quit()
+        table_data = []
+        for row in rows:
+            cols = row.find_elements(By.TAG_NAME, 'td')
+            if len(cols) > 0:
+                table_data.append([col.text for col in cols])
+        logger.info(f"Retrieved {len(table_data)} rows from AHJ registry.")
 
-    # Convert table data to a DataFrame and return as JSON serializable
-    df = pd.DataFrame(table_data, columns=['AHJ Code', 'AHJ Name', 'County', 'Building Code', 'Electric Code', 'Fire Code', 'Residential Code', 'Wind Code', 'More Info'])
-    return df.to_dict(orient='records')
+        # Convert table data to a DataFrame and return as JSON serializable
+        df = pd.DataFrame(table_data, columns=['AHJ Code', 'AHJ Name', 'County', 'Building Code', 'Electric Code', 'Fire Code', 'Residential Code', 'Wind Code', 'More Info'])
+        return df.to_dict(orient='records')
+    except Exception as e:
+        logger.error(f"Error during AHJ registry search: {e}")
+        return []
+    finally:
+        driver.quit()
 
 # Function to perform Bing search with exponential backoff and PDF filter and regular websites
 def perform_bing_search(query, retries=5):
+
+    logger.info(f"Starting Bing search for query: {query}")
     bing_api_url = f"{config.BING_ENDPOINT}v7.0/search"  # Bing Search API endpoint
     api_key = config.BING_KEY  # Your Bing API key from Azure
     delay = 1  # Start with a 1-second delay
@@ -138,4 +162,3 @@ def perform_bing_search(query, retries=5):
         web_links = []
 
     return pdf_links, web_links
-

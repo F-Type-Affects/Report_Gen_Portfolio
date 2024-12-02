@@ -4,25 +4,24 @@ import jwt
 import os
 import logging
 import time
-from .database import execute_query, get_sub_by_email
-from . import config
+from .database import execute_query, get_sub_by_email, print_all_tokens
+from .config import get_config
 
-# Configure logging
-logging.basicConfig(level=logging.WARNING)
+config = get_config()
+
 logger = logging.getLogger(__name__)
 
-# Load environment variables
 CLIENT_ID = config.CLIENT_ID
 CLIENT_SECRET = config.CLIENT_SECRET
 TOKEN_ENDPOINT = config.TOKEN_BASE_URL
 
-# Saves token and user data aquired during the login and authentication process. Checks if the user already exists and adds data appropriately
-def save_token_data(sub, id_token, access_token, expires_in, token_type, refresh_token, refresh_token_expires_in, email=None):
+def save_token_data(sub, id_token, access_token, expires_in, token_type, refresh_token, refresh_token_expires_in, email=None, first_name=None, last_name=None, user_id=None):
     """
-    checks if the users sub already exist in the database or not. If it does, then it updates the table with only necessary data.
-    if the sub is not in the database it will update the table as if it is a new user
+    Saves token and user data acquired during the login and authentication process.
+    Checks if the user already exists and adds data appropriately.
     """
     # First, check if the entry exists
+    logger.info(f"Saving token data for sub: {sub}")
     existing = execute_query(
         "SELECT sub FROM tokens WHERE sub = ?",
         (sub,),
@@ -31,6 +30,7 @@ def save_token_data(sub, id_token, access_token, expires_in, token_type, refresh
 
     if existing:
         # Entry exists, update only the token information
+        logger.debug(f"User with sub: {sub} exists. Updating token data.")
         query = """
             UPDATE tokens
             SET id_token = ?, access_token = ?, expires_in = ?, token_type = ?, refresh_token = ?, refresh_token_expires_in = ?
@@ -44,21 +44,25 @@ def save_token_data(sub, id_token, access_token, expires_in, token_type, refresh
             raise Exception(f"Database operation failed: {e}")
     else:
         # Entry does not exist, insert new data
-        # check for email
+        logger.debug(f"User with sub: {sub} does not exist. Inserting new token data.")
         if not email:
-            logger.error(f"Email is required for new token insertion")
+            logger.error("Email is required for new token insertion")
             raise Exception("Email is required for new token insertion")
         
         query = """
-            INSERT INTO tokens (sub, email, id_token, access_token, expires_in, token_type, refresh_token, refresh_token_expires_in)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO tokens (sub, email, first_name, last_name, user_id, id_token, access_token, expires_in, token_type, refresh_token, refresh_token_expires_in)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """
-        params = (sub, email, id_token, access_token, expires_in, token_type, refresh_token, refresh_token_expires_in)
+        params = (sub, email, first_name, last_name, user_id, id_token, access_token, expires_in, token_type, refresh_token, refresh_token_expires_in)
         try:
             execute_query(query, params)
+            logger.info(f"Token data successfully saved for sub: {sub}")
         except Exception as e:
             logger.error(f"Error saving new token data for sub: {e}")
             raise Exception(f"Database operation failed: {e}")
+    
+    print_all_tokens()  # Set to False to limit logging
+
 
 # extracts token from data base, checks if it is valid, if it is not it refreshes the token
 def get_valid_access_token(sub):
@@ -66,6 +70,7 @@ def get_valid_access_token(sub):
     Retrieves a valid access token for the user with the given sub.
     If the current access token is expired, refresh it.
     """
+    logger.info(f"Fetching valid access token for sub: {sub}")
     query = """
         SELECT access_token, expires_in, refresh_token FROM tokens WHERE sub = ?
     """
@@ -75,10 +80,13 @@ def get_valid_access_token(sub):
     if token_data:
         access_token, expires_in, refresh_token = token_data[0]
         if current_time < expires_in:
+            logger.debug("Access token is still valid.")
             return access_token
         else:
+            logger.info("Access token expired. Refreshing token.")
             return refresh_access_token(sub, refresh_token)
     else:
+        logger.error(f"No token data found for sub: {sub}")
         raise Exception("No token data found for user.")
 
 # refreshes the users access token if it is expired.
@@ -86,6 +94,7 @@ def refresh_access_token(sub, refresh_token):
     """
     Uses a refresh token to obtain new access tokens for the given user identifier (sub).
     """
+    logger.info(f"Refreshing access token for sub: {sub}")
     payload = {
         'grant_type': 'refresh_token',
         'refresh_token': refresh_token,
@@ -95,6 +104,7 @@ def refresh_access_token(sub, refresh_token):
     try:
         response = requests.post(TOKEN_ENDPOINT, data=payload)
         if response.status_code == 200:
+            logger.debug("Token refresh successful.")
             token_data = response.json()
             current_time = int(time.time())
             token_data['expires_in'] = int(token_data.get('expires_in',0)) + current_time
@@ -122,8 +132,10 @@ def validate_token(access_token):
     """
     Validates the access token.
     """
+    logger.info("Validating access token.")
     try:
         jwt.decode(access_token, options={"verify_signature": False})  # Simplified; in production, verify the signature
+        logger.debug("Access token is valid.")
     except jwt.InvalidTokenError as e:
         logger.error(f'Invalid token: {e}')
         raise Exception('Token validation failed')
@@ -131,13 +143,17 @@ def validate_token(access_token):
 # fetches the token from the data base. 
 def fetch_access_token(sub):
     
+    logger.info(f"Fetching access token for sub: {sub}")
     if not sub:
+        logger.error("Sub is missing. User not authenticated.")
         raise Exception("User not authenticated")
 
     try:
         access_token = get_valid_access_token(sub)
+        logger.debug("Access token fetched successfully.")
         return access_token
     except Exception as e:
+        logger.error(f"Failed to fetch access token for sub: {sub}: {e}")
         raise Exception(f"Failed to fetch access token: {str(e)}")
 
 def fetch_access_token_by_email(email):
@@ -148,7 +164,9 @@ def fetch_access_token_by_email(email):
     Returns:
         str: A valid access token.
     """
+    logger.info(f"Fetching access token for email: {email}")
     sub = get_sub_by_email(email)
     if not sub:
+        logger.error(f"No sub found for email: {email}")
         raise Exception("User not authenticated")
     return fetch_access_token(sub)

@@ -2,15 +2,21 @@ import openpyxl
 import datetime
 import openpyxl
 import os
-from . import config
+import logging
+from .config import get_config
 from openpyxl.utils import get_column_letter
 from openpyxl.styles import Font, PatternFill
+
+config = get_config()
+
+logger = logging.getLogger(__name__)
 
 # Base directory for Jobs
 BASE_DIR = config.REPORT_DIRECTORY
 
 def create_workbook():
     # Create a new Excel workbook and active worksheet
+    logger.info("Creating a new workbook with predefined headers.")
     workbook = openpyxl.Workbook()
     sheet = workbook.active
 
@@ -29,6 +35,7 @@ def create_workbook():
         sheet[cell].font = Font(bold=True)
         sheet[cell].fill = PatternFill(start_color="D9D9D9", end_color="D9D9D9", fill_type="solid")  # Light grey fill
 
+    logger.debug("Workbook headers added successfully.")
     return workbook
 
 
@@ -42,6 +49,8 @@ def insert_project_data(sheet, project):
     sheet['D5'] = project.get('city', '')
     sheet['E5'] = project.get('state', '')
     sheet['F5'] = project.get('zip_code', '')
+    
+    logger.debug("Project data inserted successfully.")
 
 
 def insert_client_data(sheet, client):
@@ -54,6 +63,8 @@ def insert_client_data(sheet, client):
     sheet['F8'] = client.get('zip_code', '')
     sheet['B10'] = client.get('client_phone', '')
     sheet['B11'] = client.get('client_email', '')
+    
+    logger.debug("Client data inserted successfully.")
 
     
 
@@ -63,6 +74,7 @@ def auto_adjust_column_width(sheet):
     Args:
         sheet: The active sheet of the workbook.
     """
+    logger.info("Auto-adjusting column widths.")
     for col in sheet.columns:
         max_length = 0
         col_letter = get_column_letter(col[0].column)  # Get the letter of the column
@@ -76,6 +88,8 @@ def auto_adjust_column_width(sheet):
         # Adjust the column width
         adjusted_width = (max_length + 2)
         sheet.column_dimensions[col_letter].width = adjusted_width
+        
+    logger.debug("Column widths adjusted.")
 
 def insert_ahj_data(sheet, ahj_info, amendment_data):
     """
@@ -86,6 +100,7 @@ def insert_ahj_data(sheet, ahj_info, amendment_data):
         amendment_data: A dictionary with lists for 'pdf_links' and 'web_links' keys.
     """
     # Insert AHJ jurisdiction and building codes in columns H and I
+    logger.info("Inserting AHJ and amendment data.")
     for row, ahj in enumerate(ahj_info, start=2):
         sheet[f'H{row}'] = ahj.get('AHJ Name', '')
         sheet[f'I{row}'] = ahj.get('Building Code', '')
@@ -105,6 +120,8 @@ def insert_ahj_data(sheet, ahj_info, amendment_data):
         cell.hyperlink = web_link
         cell.value = web_name
         cell.font = Font(color="0000FF", underline="single")  # Blue font to mimic a hyperlink
+    
+    logger.debug("AHJ and amendment data inserted successfully.")
 
 
 def save_workbook(workbook, project_code):
@@ -119,15 +136,18 @@ def save_workbook(workbook, project_code):
         str: The full path of the saved workbook, or None if save failed.
     """
     # Find the project directory based on the project code
+    logger.info(f"Saving workbook for project: {project_code}")
     project_dir = find_project_directory(project_code)
+    
     if not project_dir:
-        print("Project directory not found; workbook not saved.")
+        logger.error(f"Project directory not found for project code: {project_code}")
         return None
 
     # Define the AHJ_REPORT directory within the project folder
     ahj_report_dir = os.path.join(project_dir, "AHJ_REPORT")
     if not os.path.exists(ahj_report_dir):
         os.makedirs(ahj_report_dir)  # Create the directory if it doesn't exist
+        logger.debug(f"Created directory: {ahj_report_dir}")
 
     # Create the filename with timestamp
     filename = f"AHJ_Report_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
@@ -136,10 +156,10 @@ def save_workbook(workbook, project_code):
     # Save the workbook
     try:
         workbook.save(full_path)
-        print(f"Workbook successfully saved at {full_path}")
+        logger.info(f"Workbook saved successfully at {full_path}")
         return full_path
     except Exception as e:
-        print(f"Failed to save workbook: {e}")
+        logger.error(f"Failed to save workbook: {e}")
         return None
 
 def find_project_directory(project_code):
@@ -154,6 +174,7 @@ def find_project_directory(project_code):
         str: Path to the project directory if it exists, or None if not found.
     """
     # Determine year and code
+    logger.info(f"Finding project directory for project code: {project_code}")
     if len(project_code) == 7 and project_code[2] == '-':  # Format "yy-code"
         year, code = project_code[:2], project_code[3:]
         year = "20" + year  # Convert yy to yyyy format
@@ -161,7 +182,7 @@ def find_project_directory(project_code):
         code, year = project_code[:4], project_code[5:]
         year = "20" + year  # Convert yy to yyyy format
     else:
-        print("Invalid project code format")
+        logger.error("Invalid project code format.")
         return None
 
     # Construct the path to the yearly folder (e.g., '/mnt/projects/Jobs/Jobs YYYY')
@@ -170,11 +191,11 @@ def find_project_directory(project_code):
     year_directory = os.path.join(BASE_DIR, "Jobs", year_folder)
     
      # Debug: Log the constructed year folder path
-    print(f"Constructed year folder path: {year_directory}")
+    logger.debug(f"Constructed year folder path: {year_directory}")
     
     # Ensure the yearly folder exists
     if not os.path.exists(year_directory):
-        print(f"Year folder not found: {year_directory}")
+        logger.warning(f"Year folder not found: {year_directory}")
         return None
 
     # Search for the matching project directory within the year's directory
@@ -183,11 +204,11 @@ def find_project_directory(project_code):
             if dir_name.startswith(project_folder_name):
                 return os.path.join(year_directory, dir_name)
     except FileNotFoundError:
-        print(f"Year folder not found: {year_directory}")
+        logger.warning(f"Year folder not found: {year_directory}")
         return None
     except Exception as e:
-        print(f"Error accessing project directory: {e}")
+        logger.error(f"Error accessing project directory: {e}")
         return None
 
-    print(f"Project directory not found for project code: {project_code}")
+    logger.warning(f"Project directory not found for project code: {project_code}")
     return None

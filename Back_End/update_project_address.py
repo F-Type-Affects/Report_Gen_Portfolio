@@ -1,9 +1,14 @@
 import http.client
 import json
+import logging
 from urllib.parse import urlparse, quote
-from Back_End import config
+from .config import get_config
 from Back_End.token_manager import fetch_access_token
 from Back_End.database import get_sub_by_email
+
+config = get_config()
+
+logger = logging.getLogger(__name__)
 
 def get_project_address_by_code(project_code, selected_email):
     """
@@ -14,9 +19,11 @@ def get_project_address_by_code(project_code, selected_email):
     Returns: 
         dict: project data retrieved from API
     """
+    logger.info(f"Fetching project address for code: {project_code}, email: {selected_email}")
     # get user sub
     user_sub = get_sub_by_email(selected_email)
     if not user_sub:
+        logger.error("No user found for the given email.")
         raise Exception("No user found for the given email")
     
     project_base_url = config.PROJECT_BASE_URL
@@ -36,27 +43,32 @@ def get_project_address_by_code(project_code, selected_email):
     conn = http.client.HTTPSConnection(parsed_url.hostname)
 
     try:
+        logger.debug(f"Sending GET request to {request_path}")
         conn.request("GET", request_path, headers=headers)
         res = conn.getresponse()
         data = res.read()
         
-        # Print the raw data for debugging
-        print("Raw project data from API: ", data.decode("utf-8"))
+        logger.debug(f"Response status: {res.status}")
+        logger.debug(f"Response data: {data.decode('utf-8')}")
         
         if res.status == 200:
+            logger.info("Project data retrieved successfully.")
             return json.loads(data.decode("utf-8"))
         else:
+            logger.warning(f"Failed to retrieve project data. Status code: {res.status}")
             return None
     except http.client.HTTPException as e:
-        print("HTTP error occurred:", e)
+        logger.error(f"HTTP error occurred while fetching project data: {e}")
+        return None
+    except Exception as e:
+        logger.error(f"Unexpected error occurred while fetching project data: {e}")
+        return None
     finally:
         conn.close()
     
 def update_project_address_in_bqe(project_data, address, selected_email):
         """Update the project address via the BQE API."""
-    
-        project_id = project_data['id']
-    
+        logger.info(f"Updating project address for project ID: {project_data['id']}, email: {selected_email}")
         # Construct the project payload with all necessary fields
         payload = {
             "id": project_data["id"],
@@ -80,11 +92,12 @@ def update_project_address_in_bqe(project_data, address, selected_email):
 
         # Prepare the API URL
         project_base_url = config.PROJECT_BASE_URL
-        url = f"{project_base_url}{project_id}"
+        url = f"{project_base_url}{project_data['id']}"
 
         # Prepare headers
         user_sub = get_sub_by_email(selected_email)
         if not user_sub:
+            logger.error("No user found for the given email.")
             raise Exception("No user found for the given email")
     
         access_token = fetch_access_token(user_sub)
@@ -103,16 +116,23 @@ def update_project_address_in_bqe(project_data, address, selected_email):
         conn = http.client.HTTPSConnection(parsed_url.hostname)
 
         try:
-            print(f"Sending request to: {url}")
+            logger.debug(f"Sending PUT request to {url} with payload: {payload_json}")
             conn.request("PUT", parsed_url.path, body=payload_json, headers=headers)
             res = conn.getresponse()
             data = res.read()
+            
+            logger.debug(f"Response status: {res.status}")
+            logger.debug(f"Response data: {data.decode('utf-8')}")
         
             if res.status == 200:
-                print("Address updated successfully.")
+                logger.info("Project address updated successfully.")
             else:
-                print(f"Failed to update address: {res.status}")
-                print(data.decode("utf-8"))
+                logger.warning(f"Failed to update project address. Status code: {res.status}")
+                logger.warning(f"Response: {data.decode('utf-8')}")
+        except http.client.HTTPException as e:
+            logger.error(f"HTTP error occurred while updating project address: {e}")
+        except Exception as e:
+            logger.error(f"Unexpected error occurred while updating project address: {e}")
         finally:
             conn.close()
 

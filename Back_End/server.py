@@ -1,48 +1,46 @@
+# Flask imports
+from flask import Flask, redirect, request, session, jsonify, render_template, url_for, flash
+from flask_session import Session
+
+# General Imports
 import logging
 import os
 import time
-from flask import Flask, redirect, request, session, jsonify, render_template, url_for, flash
-from flask_session import Session
 from redis import Redis
-from datetime import timedelta
 import requests
 
+# Module imports
 from .auth import get_authorization_url, exchange_code_for_token, decode_id_token, get_user_info
 from .database import setup_database, get_all_emails
 from .token_manager import save_token_data, get_valid_access_token
 from .project_manager import get_project_by_code, get_client_by_id
 from .models import Project, Client
-from . import config
+from .config import get_config
 from .ahj_manager import search_ahj_registry, perform_bing_search
 from .create_project import get_clients_by_name, get_employees, fetch_manager_id, send_create_project_request
 from .export_project_details import create_workbook, insert_project_data, insert_client_data, insert_ahj_data, save_workbook
 
-app = Flask(
-	__name__,
-	static_folder="C:\\Users\\fstranathan\\Desktop\\SML_Reports_Test\\Front_End_Web\\static",
-	template_folder="C:\\Users\\fstranathan\\Desktop\\SML_Reports_Test\\Front_End_Web\\templates"
-)
+config = get_config()
 
-# app configuration
-app.config['DEBUG'] = False  # Ensure debugging is off for production
-app.config['SECRET_KEY'] = config.APP_KEY  # Securely generate and store this
-app.config['SESSION_TYPE'] = 'redis'
-app.config['SESSION_PERMANENT'] = False  # Set to False so the session expires when the user closes the app
-app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=30)
-app.config['SESSION_USE_SIGNER'] = True  # Encrypt session cookies for extra security
-app.config['SESSION_KEY_PREFIX'] = 'sml_report_gen:'  # Optional prefix to help distinguish session keys in Redis
-app.config['SESSION_REDIS'] = Redis(host='127.0.0.1', port=6379)  # Connect to your Redis instance on the server
+config.configure_logging()
+
+app = Flask(__name__, static_folder=config.STATIC_FOLDER, template_folder=config.TEMPLATE_FOLDER)
+
+app.config.from_object(config)
+
+app.config['SESSION_REDIS'] = Redis(
+    host=config.REDIS_HOST,
+    port=config.REDIS_PORT
+)
 
 # Set up sessions with Redis
 Session(app)
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)  # Adjust to INFO for production
-logger = logging.getLogger(__name__)
-
 # Set up database
 DATABASE_PATH = config.DATABASE_PATH
 setup_database(DATABASE_PATH)
+
+logger = logging.getLogger(__name__)
 
 ##############################################################
 # load the home page of application from template
@@ -104,18 +102,34 @@ def callback():
         if not user_info:
             return "Failed to retrieve user info.", 500
         
-        print("User Info: ", user_info)
+        logger.debug("User Info: %s", user_info)
+        
+        # Extract required user information
+        email = user_info.get('email')
+        first_name = user_info.get('given_name')
+        last_name = user_info.get('family_name')
+        user_id = user_info.get('user_id')  # Assuming 'user_id' is present
+        
+        if not all([email, first_name, last_name, user_id]):
+            logger.error("Missing user information from user_info")
+            return "Incomplete user information received.", 400
         
         #adjust expires_in to absolute time
         current_time = int(time.time())
+        
         #set expires in to correct time
         token_data['expires_in'] = int(token_data.get('expires_in', 0)) + current_time
+        
         #set time for refresh token to expire
         token_data['refresh_token_expires_in'] = current_time + 1 * 24 * 3600
-        # save extracted token data
+        
+        # Save extracted token and user data
         save_token_data(
-            sub=sub,  # Assuming 'sub' is available in token_data directly
-            email= user_info.get('email'),
+            sub=sub,
+            email=email,
+            first_name=first_name,
+            last_name=last_name,
+            user_id=user_id,
             id_token=token_data.get('id_token'),
             access_token=token_data.get('access_token'),
             expires_in=token_data.get('expires_in'),
