@@ -27,6 +27,7 @@
             <a href="{{ url_for('select_user_email_get') }}" class="btn">Fetch Project Details</a>
             <a href="{{ url_for('fetch_ahj_address_get') }}" class="btn btn-primary">Find AHJ & Amendments</a>
             <a href="{{ url_for('display_report_details_get') }}" class="btn btn-primary">Export Project Report</a>
+            <a href="{{ url_for('select_user_email_get', next_url=url_for('fetch_project_number_get_cover_letter')) }}" class="btn btn-primary">Generate Cover Letter</a>
             <button onclick="exitApp()" class="btn">Clear Session Data</button>
         </nav>
         

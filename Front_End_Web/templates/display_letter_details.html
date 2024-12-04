@@ -1,0 +1,28 @@
+<!-- display_letter_details.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Confirm Letter Details</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/display_letter_details.css') }}">
+</head>
+<body>
+    <header>
+        <h1>Confirm Letter Details</h1>
+    </header>
+    <div class="container">
+        <p><strong>Project Name:</strong> {{ project_data['name'] }}</p>
+        <p><strong>Project Address:</strong> {{ project_data['street1'] }} {{ project_data['street2'] }}, {{ project_data['city'] }}, {{ project_data['state'] }} {{ project_data['zip_code'] }}</p>
+        <p><strong>Client Name:</strong> {{ client_data['client_name'] }}</p>
+        <p><strong>Project Number:</strong> {{ project_data['code'] }}</p>
+        <p><strong>By:</strong> {{ first_name }} {{ last_name }}</p>
+        
+        <form method="POST" action="{{ url_for('display_letter_details_post') }}">
+            <button type="submit">Confirm</button>
+            <button type="button" onclick="window.location.href='{{ url_for('fetch_project_number_get_cover_letter') }}'">Search Again</button>
+            <button type="button" onclick="window.location.href='{{ url_for('home') }}'">Home</button>
+        </form>
+    </div>
+</body>
+</html>

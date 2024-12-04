@@ -8,10 +8,12 @@ import os
 import time
 from redis import Redis
 import requests
+import subprocess
+import webbrowser
 
 # Module imports
 from .auth import get_authorization_url, exchange_code_for_token, decode_id_token, get_user_info
-from .database import setup_database, get_all_emails
+from .database import setup_database, get_all_emails, get_user_details_by_email
 from .token_manager import save_token_data, get_valid_access_token
 from .project_manager import get_project_by_code, get_client_by_id
 from .models import Project, Client
@@ -19,6 +21,7 @@ from .config import get_config
 from .ahj_manager import search_ahj_registry, perform_bing_search
 from .create_project import get_clients_by_name, get_employees, fetch_manager_id, send_create_project_request
 from .export_project_details import create_workbook, insert_project_data, insert_client_data, insert_ahj_data, save_workbook
+from .cover_letter import generate_cover_letter
 
 config = get_config()
 
@@ -167,7 +170,7 @@ def get_access_token():
 
 @app.route('/select_user_email_get', methods=['GET'])
 def select_user_email_get():
-    next_url = url_for('fetch_project_number_get')  # URL to go to after selecting the email
+    next_url = request.args.get('next_url', url_for('fetch_project_number_get'))
     emails = get_all_emails()  # Retrieve emails from the database
     return render_template('select_user_email.html', emails=emails, next_url=next_url)
 
@@ -188,12 +191,12 @@ def select_user_email_post():
 
 #####################################################################
 # GET and POST routes to enter a project number and to search a project by number
-# GET route to display project number entry form
+# GET route to display project number entry form specific to export project details
 @app.route('/fetch_project_number', methods=['GET'])
 def fetch_project_number_get():
-    return render_template('select_project_number.html')  # Updated template name
+    return render_template('select_project_number.html')
 
-# POST route to handle project number submission
+# POST route to handle project number submission for export project details
 @app.route('/fetch_project_number_submit', methods=['POST'])
 def fetch_project_number_post():
     selected_email = session.get('selected_email')
@@ -202,6 +205,8 @@ def fetch_project_number_post():
         return redirect(url_for('select_user_email_get'))
     
     project_number = request.form.get('project_number')
+    next_url = request.form.get('next_url')
+    
     if not project_number:
         flash('Please enter a project number.', 'error')
         return redirect(url_for('fetch_project_number_get'))
@@ -242,7 +247,13 @@ def fetch_project_number_post():
     }
     
     # Redirect to the display page route
-    return redirect(url_for('display_project_client_details'))
+    return redirect(next_url or url_for('home'))
+
+# Get route for project number search specefic to create cover letter
+@app.route('/fetch_project_number_cover_letter', methods=['GET'])
+def fetch_project_number_get_cover_letter():
+    next_url = url_for('display_letter_details_get')
+    return render_template('select_project_number.html', next_url=next_url)
 
 ############################################################
 # app route to display the project and client details for the user
@@ -526,6 +537,97 @@ def login_user(sub):
 
 def get_user_sub():
     return session.get('user_sub')  # Retrieve the sub when needed
+
+###################################################################################
+# App routes specefic to creating calculation cover letter
+####################################################################################
+
+# Get Route to display project / client details to user and allow confirmation
+@app.route('/display_letter_details_get', methods=['GET'])
+def display_letter_details_get():
+    # Retrieve data from session
+    project_data = session.get('project_data')
+    client_data = session.get('client_data')
+    selected_email = session.get('selected_email')
+
+    # Check if all necessary data is present
+    if not all([project_data, client_data, selected_email]):
+        flash('Missing data. Please start over.', 'error')
+        return redirect(url_for('home'))
+
+    # Fetch user's first and last name
+    user_details = get_user_details_by_email(selected_email)
+
+    if not user_details:
+        flash('User details not found.', 'error')
+        return redirect(url_for('home'))
+
+    first_name = user_details.get('first_name')
+    last_name = user_details.get('last_name')
+
+    return render_template('display_letter_details.html', 
+                           project_data=project_data, 
+                           client_data=client_data, 
+                           first_name=first_name, 
+                           last_name=last_name)
+    
+# POST route handles confirmation, generates cover letter, and saves it
+@app.route('/display_letter_details_post', methods=['POST'])
+def display_letter_details_post():
+    # Retrieve data from session
+    project_data = session.get('project_data')
+    client_data = session.get('client_data')
+    selected_email = session.get('selected_email')
+
+    # Check if all necessary data is present
+    if not all([project_data, client_data, selected_email]):
+        flash('Missing data. Please start over.', 'error')
+        return redirect(url_for('home'))
+
+    # Fetch user's first and last name
+    user_details = get_user_details_by_email(selected_email)
+
+    if not user_details:
+        flash('User details not found.', 'error')
+        return redirect(url_for('home'))
+
+    first_name = user_details.get('first_name')
+    last_name = user_details.get('last_name')
+
+    # Generate the cover letter
+    result = generate_cover_letter(project_data, client_data, first_name, last_name)
+
+    if result:
+        flash('Cover letter generated successfully.', 'success')
+    else:
+        flash('Failed to generate cover letter.', 'error')
+
+    return redirect(url_for('home'))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 ##################################
 # app routes to launch application and exit application

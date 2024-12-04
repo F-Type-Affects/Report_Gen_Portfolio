@@ -61,8 +61,6 @@ def update_token_data(sub, access_token, expires_in, refresh_token, refresh_toke
     execute_query(query, params)
     logger.debug(f"Token data updated ")
 
-
-
 def execute_query(query, params=None, is_select=False):
     """
     Execute a given SQL query on the database with parameters and handle exceptions.
@@ -112,7 +110,29 @@ def get_sub_by_email(email):
         return result[0][0]
     else:
         return None
-    
+
+def get_user_details_by_email(email):
+    """
+    Retrieves the first name and last name of the user associated with the given email.
+
+    Args:
+        email (str): The user's email address.
+
+    Returns:
+        dict: A dictionary containing 'first_name' and 'last_name', or None if not found.
+    """
+    query = "SELECT first_name, last_name FROM tokens WHERE email = ?"
+    try:
+        result = execute_query(query, (email,), is_select=True)
+        if result:
+            row = result[0]  # fetchone equivalent
+            return {'first_name': row[0], 'last_name': row[1]}
+        else:
+            return None
+    except Exception as e:
+        logger.error(f"Failed to retrieve user details for email {email}: {e}")
+        return None
+   
 def get_all_tokens_data():
     """
     Retrieves all tokens data stored in the database.
