@@ -20,7 +20,7 @@
         
         <form method="POST" action="{{ url_for('display_letter_details_post') }}">
             <button type="submit">Confirm</button>
-            <button type="button" onclick="window.location.href='{{ url_for('fetch_project_number_get_cover_letter') }}'">Search Again</button>
+            <button type="button" onclick="window.location.href='{{ url_for('select_user_email_get', next='display_letter_details_get') }}'">Search Again</button>
             <button type="button" onclick="window.location.href='{{ url_for('home') }}'">Home</button>
         </form>
     </div>

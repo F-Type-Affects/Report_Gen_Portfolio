@@ -167,11 +167,10 @@ def get_access_token():
 
 #####################################################################
 # routes to select user's email which is required to retrieve user sub which is required for API calls to CORE
-
 @app.route('/select_user_email_get', methods=['GET'])
 def select_user_email_get():
-    next_url = request.args.get('next_url', url_for('fetch_project_number_get'))
     emails = get_all_emails()  # Retrieve emails from the database
+    next_url = request.args.get('next', 'display_project_client_details')
     return render_template('select_user_email.html', emails=emails, next_url=next_url)
 
 @app.route('/select_user_email_post', methods=['POST'])
@@ -187,14 +186,15 @@ def select_user_email_post():
     session['selected_email'] = selected_email
     flash(f'Email "{selected_email}" selected successfully.', 'success')
 
-    return redirect(next_url or url_for('home'))
+    return redirect(url_for('fetch_project_number_get', next=next_url))
 
 #####################################################################
 # GET and POST routes to enter a project number and to search a project by number
 # GET route to display project number entry form specific to export project details
 @app.route('/fetch_project_number', methods=['GET'])
 def fetch_project_number_get():
-    return render_template('select_project_number.html')
+    next_url = request.args.get('next', 'display_project_client_details')
+    return render_template('select_project_number.html', next_url=next_url)
 
 # POST route to handle project number submission for export project details
 @app.route('/fetch_project_number_submit', methods=['POST'])
@@ -245,15 +245,20 @@ def fetch_project_number_post():
         'state': client.state,
         'zip_code': client.zip_code
     }
+
+    # Validate and determine the redirection target
+    allowed_routes = ['display_project_client_details', 'display_letter_details_get']
+    if next_url not in allowed_routes:
+        next_url = 'home'  # Fallback to home if invalid
+        
+    # Generate the redirection URL
+    redirection_url = url_for(next_url)
+    
+    logger.debug(f"Redirecting to {redirection_url} with project_number: {project_number}")
     
     # Redirect to the display page route
-    return redirect(next_url or url_for('home'))
+    return redirect(redirection_url)
 
-# Get route for project number search specefic to create cover letter
-@app.route('/fetch_project_number_cover_letter', methods=['GET'])
-def fetch_project_number_get_cover_letter():
-    next_url = url_for('display_letter_details_get')
-    return render_template('select_project_number.html', next_url=next_url)
 
 ############################################################
 # app route to display the project and client details for the user
@@ -282,7 +287,6 @@ def confirm_project_details():
 
     flash("Project and Client details confirmed and saved.", 'success')
     return redirect(url_for('home'))
-
 
 #####################################################
 # app routes to search AHJ registry and Bing for amendments to build codes
@@ -326,10 +330,10 @@ def get_amendments():
 @app.route('/fetch_ahj_address', methods=['GET'])
 def fetch_ahj_address_get():
     # Check if project details are in session
+    project_data = session.get('project_data')
     project_address = None
-    if 'project' in session:
-        project = session['project']
-        project_address = f"{project['street1']}, {project['city']}, {project['state']}, {project['zip_code']}"
+    if project_data:
+        project_address = f"{project_data['street1']}, {project_data['city']}, {project_data['state']}, {project_data['zip_code']}"
     
     return render_template('fetch_ahj_address.html', project_address=project_address)
 

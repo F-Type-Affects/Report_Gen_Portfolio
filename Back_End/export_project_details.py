@@ -165,50 +165,71 @@ def save_workbook(workbook, project_code):
 def find_project_directory(project_code):
     """
     Finds the project directory based on the project code format.
-    Handles nested structure where yearly folders are prefixed with 'Jobs'.
 
     Args:
-        project_code (str): Project code in format "yy-code" (new) or "code-yy" (old).
+        project_code (str): Project code in format "yy-xxxx" or "xxxx-yy".
 
     Returns:
         str: Path to the project directory if it exists, or None if not found.
     """
-    # Determine year and code
     logger.info(f"Finding project directory for project code: {project_code}")
-    if len(project_code) == 7 and project_code[2] == '-':  # Format "yy-code"
+
+    # Handle "yy-xxxx" format (e.g., "24-0022")
+    if len(project_code) == 7 and project_code[2] == '-':
         year, code = project_code[:2], project_code[3:]
-        year = "20" + year  # Convert yy to yyyy format
-    elif len(project_code) == 8 and project_code[4] == '-':  # Format "code-yy"
+        year_full = "20" + year
+        logger.debug(f"Parsed format 'yy-xxxx': year={year_full}, code={code}")
+
+    # Handle "xxxx-yy" format (e.g., "0022-23")
+    elif len(project_code) == 7 and project_code[4] == '-':
         code, year = project_code[:4], project_code[5:]
-        year = "20" + year  # Convert yy to yyyy format
+        year_full = "20" + year
+        logger.debug(f"Parsed format 'xxxx-yy': year={year_full}, code={code}")
+
     else:
-        logger.error("Invalid project code format.")
+        logger.error(f"Invalid project code format: {project_code}")
         return None
 
-    # Construct the path to the yearly folder (e.g., '/mnt/projects/Jobs/Jobs YYYY')
-    year_folder = f"Jobs {year}"  # e.g., 'Jobs 2024'
-    project_folder_name = f"{int(code):03d}-{year[-2:]}"  # Format to 'xxx-yy'
-    year_directory = os.path.join(BASE_DIR, "Jobs", year_folder)
-    
-     # Debug: Log the constructed year folder path
+    # Format the project code to match directory naming
+    if len(code) == 4 and code.startswith('0'):
+        # Remove the leading zero for codes like "0022" -> "022"
+        code_formatted = code[1:]
+        logger.debug(f"Formatted 4-digit code with leading zero: {code} -> {code_formatted}")
+    elif len(code) <= 3:
+        # Ensure 3-digit format with leading zeros if necessary
+        code_formatted = code.zfill(3)
+        logger.debug(f"Formatted code to 3 digits: {code} -> {code_formatted}")
+    else:
+        # Keep the code as is for 4-digit codes without leading zeros
+        code_formatted = code
+        logger.debug(f"Formatted code (no changes needed): {code} -> {code_formatted}")
+
+    # Construct the project folder name
+    project_folder_name = f"{code_formatted}-{year}"
+    logger.debug(f"Constructed project folder name: {project_folder_name}")
+
+    # Construct the full path to the year directory
+    base_dir = config.COVER_LETTER_OUTPUT_DIR
+    year_folder = f"Jobs {year_full}"
+    year_directory = os.path.join(base_dir, year_folder)
     logger.debug(f"Constructed year folder path: {year_directory}")
-    
-    # Ensure the yearly folder exists
+
+    # Check if the year directory exists
     if not os.path.exists(year_directory):
         logger.warning(f"Year folder not found: {year_directory}")
         return None
 
-    # Search for the matching project directory within the year's directory
+    # Search for the project directory within the year directory
     try:
         for dir_name in os.listdir(year_directory):
             if dir_name.startswith(project_folder_name):
-                return os.path.join(year_directory, dir_name)
-    except FileNotFoundError:
-        logger.warning(f"Year folder not found: {year_directory}")
-        return None
+                project_directory = os.path.join(year_directory, dir_name)
+                logger.info(f"Found project directory: {project_directory}")
+                return project_directory
     except Exception as e:
         logger.error(f"Error accessing project directory: {e}")
         return None
 
+    # If the project directory is not found
     logger.warning(f"Project directory not found for project code: {project_code}")
     return None

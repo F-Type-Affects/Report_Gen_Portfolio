@@ -9,3 +9,5 @@ selenium
 pandas
 duckduckgo-search
 redis
+python-docx
+docxtpl

@@ -24,40 +24,52 @@
     <div class="container">
         <nav class="sidebar">
             <a href="{{ url_for('login') }}" class="btn">Login & Authenticate</a>
-            <a href="{{ url_for('select_user_email_get') }}" class="btn">Fetch Project Details</a>
+            <a href="{{ url_for('select_user_email_get') }}?next=display_project_client_details" class="btn">Fetch Project Details</a>
             <a href="{{ url_for('fetch_ahj_address_get') }}" class="btn btn-primary">Find AHJ & Amendments</a>
-            <a href="{{ url_for('display_report_details_get') }}" class="btn btn-primary">Export Project Report</a>
-            <a href="{{ url_for('select_user_email_get', next_url=url_for('fetch_project_number_get_cover_letter')) }}" class="btn btn-primary">Generate Cover Letter</a>
+            <a href="{{ url_for('display_report_details_get') }}" class="btn btn-primary">Export AHJ Report</a>
+            <a href="{{ url_for('select_user_email_get') }}?next=display_letter_details_get" class="btn btn-primary">Generate Cover Letter</a>
             <button onclick="exitApp()" class="btn">Clear Session Data</button>
         </nav>
         
+        
         <main class="content">
             <div id="instructions">
-                <h1>Welcome to the "SML Report Generator"</h1>
-                <p>If this is your first time using the application, you must first select <strong>"Login & Authenticate"</strong>. This will take you through BQE Core's Authentication process and add your credentials to the database.</p>
+                <h1>SML Project Reporting Application</h1>
+                <p><strong> First Time Users MUST "Login & Authenticate" before doing anything else</strong>.</p>
+                <p> This will add your user credentials to the database and allow you to use the application.</p>
+                <strong> To Create AHJ Report </strong>
                 <ul>
-                    <li><strong>Select "Create Project"</strong> if you wish to create a new project and add it to Core.</li>
-                    <li><strong>Select "Update Project Address"</strong> to either:
+                    <ol>
+                        <li> Select <strong> Fetch Project Details </strong> to query and return the relevant Project & Client information </li>
+                            <ul>
+                                <li> Select your email from the drop down </li>
+                                <li> Enter the project number taking care to include padding zeros </li>
+                                <li> If the information is correct select <strong> confirm details </strong> </li>
+                            </ul>
+                        <li> Select <strong> Find AHJ & Amendments </strong> to find the AHJ for the project address and possible Amendments </li>
+                            <ul>
+                                <li> Select <strong> Search AHJ </strong> to find the AHJ information for the address </li>
+                                <li> Then select <strong> Search Amendments </strong> to query possible Amendments to the IBC Codes </li>
+                                <li> Finally select <strong> Confirm and Store </strong> to store the data for export </li>
+                            </ul>
+                        <li>Finally select <strong> Export AHJ Report </strong> to export all of the information to an excel workbook </li>
+                            <ul>
+                                <li> The workbook will be saved in the project directory on the companies J Drive </li>
+                            </ul>
+                        </ol>
+                    </ul>
+                <strong> To Generate a Calculation Cover Sheet </strong>
+                <ul>
+                <ol>
+                    <li> Select Generate Cover Letter </li>
+                    <li> Select your email from the drop down </li>
                         <ul>
-                            <li>Add an address to an existing project from the memo.</li>
-                            <li>Manually enter the address and update an existing project in Core.</li>
+                            <li> This is how your name is added to the report </li>
                         </ul>
-                    </li>
-                    <li><strong>Select "Fetch Project Details"</strong> to retrieve relevant project and client information.
-                        <ul>
-                            <li>You must do this prior to exporting the Project Details to an Excel workbook or to search the AHJ and Amendments for a given project number.</li>
-                        </ul>
-                    </li>
-                    <li><strong>Select "Find AHJ & Amendments"</strong> to:
-                        <ul>
-                            <li>View AHJ Information and possible amendments to building codes for a given address.</li>
-                            <li>Create a new project report (Excel workbook).</li>
-                            <li>Update a project report workbook missing this information.</li>
-                        </ul>
-                    </li>
-                    <li><strong>Select "Export Project Details"</strong> to export any of the information queried to a project report.</li>
-                    <li><strong>Select "Create Cover Sheet"</strong> to build a report cover sheet from a project report.</li>
-                </ul>
+                    <li> Search the project number </li>
+                    <li> Confirm the details are correct and select Confirm </li>
+                </ol>
+            </ul> 
             </div>
         </main>
     </div>
