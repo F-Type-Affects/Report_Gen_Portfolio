@@ -32,7 +32,6 @@ def get_project_by_code(project_code, selected_email):
         logger.error(f"No user found for the given email: {selected_email}")
         raise Exception("No user found for the given email")
     
-    
     project_base_url = config.PROJECT_BASE_URL
     
     access_token = fetch_access_token(user_sub)
@@ -56,6 +55,7 @@ def get_project_by_code(project_code, selected_email):
         res = conn.getresponse()
         data = res.read()
         logger.debug(f"Response status: {res.status}")
+        logger.debug(f"Get Project By Code data returned: {data.decode('utf-8')}")
         if res.status == 200:
             return json.loads(data.decode("utf-8"))
         else:
@@ -128,6 +128,7 @@ def get_client_by_id(client_id, selected_email):
         res = conn.getresponse()
         data = res.read()
         logger.debug(f"Response status: {res.status}")
+        logger.debug(f"Get Client By ID data returned: {data.decode('utf-8')}")
         if res.status == 200:
             return json.loads(data.decode("utf-8"))
         else:

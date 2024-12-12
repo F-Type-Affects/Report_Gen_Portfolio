@@ -14,16 +14,22 @@
         <h3>Project Details</h3>
         <p><strong>Project ID:</strong> {{ project.code }}</p>
         <p><strong>Project Name:</strong> {{ project.name }}</p>
-        <p><strong>Project PO #:</strong> {{ project.purchaseOrderNumber }}</p>
-        <p><strong>Project Address:</strong> {{ project.street1 }}, {{ project.street2 }}, {{ project.city }}, {{ project.state }}, {{ project.zip_code }}</p>
+        <p><strong>Project PO #:</strong> {{ project.purchase_order_number }}</p>
+        <p><strong>Project Address:</strong> 
+            {{ project.street1 }}, 
+            {% if project.street2 %}
+                {{project.street2}},
+            {% endif %}
+            {{ project.city }}, {{ project.state }}, {{ project.zip_code }}
+        </p>
+        <p><strong>Billing Contact:</strong> {{project.billing_contact or "N/A"}}</p>
 
         <!-- Display Client Details -->
         <h3>Client Details</h3>
-        <p><strong>Client Name:</strong> {{ client.name }}</p>
+        <p><strong>Client Name:</strong> {{ client.client_name }}</p>
         <p><strong>Client Address:</strong> {{ client.street1 }}, {{ client.street2 }}, {{ client.city }}, {{ client.state }}, {{ client.zip_code }}</p>
-        <p><strong>Billing Contact:</strong> {{ client.billing_contact }}</p>
-        <p><strong>Phone:</strong> {{ client.phone }}</p>
-        <p><strong>Email:</strong> {{ client.email }}</p>
+        <p><strong>Phone:</strong> {{ client.client_phone }}</p>
+        <p><strong>Email:</strong> {{ client.client_email }}</p>
 
         <!-- Display AHJ Registry Info -->
         <h3>AHJ Registry</h3>

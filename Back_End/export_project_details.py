@@ -150,7 +150,7 @@ def save_workbook(workbook, project_code):
         logger.debug(f"Created directory: {ahj_report_dir}")
 
     # Create the filename with timestamp
-    filename = f"AHJ_Report_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+    filename = f"AHJ_Report.xlsx"
     full_path = os.path.join(ahj_report_dir, filename)
 
     # Save the workbook

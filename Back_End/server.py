@@ -213,6 +213,7 @@ def fetch_project_number_post():
     
     # Fetch project details from the backend using selected email and project number
     project_data = get_project_by_code(project_number, selected_email)
+    logger.debug(f"project_data in fetch_project_number_submit: {project_data}")
     
     if not project_data:
         flash('Project not found. Please check the Project ID and try again.', 'error')
@@ -220,8 +221,13 @@ def fetch_project_number_post():
     
     # Create project and client objects from the retrieved data
     project = Project.from_dict(project_data[0])
+    logger.debug(f"project in fetch_project_number_submit: {project}")
+    
     client_data = get_client_by_id(project.client_id, selected_email)
+    logger.debug(f"client_data in fetch_project_number_submit: {client_data}")
+    
     client = Client.from_dict(client_data[0]) if client_data else None
+    logger.debug(f"client in fetch_project_number_submit: {client}")
     
     # Store project and client details in the session for use on the details page
     session['project_data'] = {
@@ -482,7 +488,11 @@ def store_amendment_results():
 def display_report_details_get():
     # Retrieve all necessary data from the session
     project = session.get('confirmed_project_data', {})
+    logger.debug(f"Project data passed to display_report_details: {project}")
+    
     client = session.get('confirmed_client_data', {})
+    logger.debug(f"Client data passed to display_report_details: {client}")
+    
     ahj_data = session.get('stored_ahj_data', [])
     amendment_pdf_links = session.get('stored_amendment_pdf_links', [])
     amendment_web_links = session.get('stored_amendment_web_links', [])

@@ -38,10 +38,6 @@ class Config:
     REDIS_HOST = '127.0.0.1'
     REDIS_PORT = 6379
     
-    # logging settings
-    LOG_LEVEL = logging.WARNING
-    DEBUG = False
-    
     @classmethod
     def configure_logging(cls):
         """Set up logging based on env"""
@@ -61,6 +57,9 @@ class DevelopmentConfig(Config):
     REPORT_DIRECTORY = os.getenv('REPORT_DIRECTORY')
     COVER_LETTER_TEMPLATE_PATH = os.getenv('COVER_LETTER_TEMPLATE_PATH')
     COVER_LETTER_OUTPUT_DIR = os.getenv('COVER_LETTER_OUTPUT_DIR')
+    # logging settings
+    LOG_LEVEL = logging.DEBUG
+    DEBUG = True
     
 # Production configuration
 class ProductionConfig(Config):
@@ -73,6 +72,10 @@ class ProductionConfig(Config):
     REPORT_DIRECTORY = os.getenv('REPORT_DIRECTORY')
     COVER_LETTER_TEMPLATE_PATH = os.getenv('COVER_LETTER_TEMPLATE_PATH')
     COVER_LETTER_OUTPUT_DIR = os.getenv('COVER_LETTER_OUTPUT_DIR')
+    
+    # logging settings
+    LOG_LEVEL = logging.WARNING
+    DEBUG = False
     
 # Function to get the correct configuration
 def get_config():

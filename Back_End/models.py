@@ -15,7 +15,7 @@ class Client:
     @classmethod
     def from_dict(cls, data):
         """Create a Client instance from a dictionary."""
-        address = data.get('address', {})
+        address = data.get('address', {}) or {}
 
         # Extract address fields
         street1 = address.get('street1', '')
@@ -28,11 +28,17 @@ class Client:
         email = ""
         phone = ""
         communications = address.get('communications', [])
+
+        # Iterate through communications to find Email, Phone, and Mobile
         for contact in communications:
-            if contact.get('typeName') == 'Email':
-                email = contact.get('value', '')
-            elif contact.get('typeName') == 'Mobile':
-                phone = contact.get('value', '')
+            type_name = contact.get('typeName', '').lower()
+            value = contact.get('value', '').strip()
+            if type_name == 'email' and not email:
+                email = value
+            elif type_name == 'phone' and not phone:
+                phone = value
+            elif type_name == 'mobile' and not phone:
+                phone = value
 
         return cls(
             client_id=str(data.get('id', '')),
@@ -45,7 +51,6 @@ class Client:
             email=email,
             phone=phone
         )
-
 
 @dataclass
 class Project:
@@ -64,13 +69,16 @@ class Project:
     @classmethod
     def from_dict(cls, data):
         """Create a Project instance from a dictionary."""
-        address = data.get('address', [])
-        # check if address is list and get first item if it is
+        address = data.get('address')
+
+        # Safely handle address if it is not a valid list or dict
         if isinstance(address, list) and address and isinstance(address[0], dict):
             address_dict = address[0]
+        elif isinstance(address, dict):
+            address_dict = address
         else:
             address_dict = {}
-        
+
         return cls(
             project_id=str(data.get('id', '')),
             code=data.get('code', ''),
