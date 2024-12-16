@@ -65,7 +65,7 @@ class DevelopmentConfig(Config):
 class ProductionConfig(Config):
     DEBUG = False
     LOG_LEVEL = logging.WARNING
-    REDIS_HOST = 'production-redis-server'
+    REDIS_HOST = '127.0.0.1'
     STATIC_FOLDER = "/home/frank/SML_Reports_Test/SML_Report_Gen/Front_End_Web/static"
     TEMPLATE_FOLDER = "/home/frank/SML_Reports_Test/SML_Report_Gen/Front_End_Web/templates"
     DATABASE_PATH = os.getenv('DATABASE_PATH')

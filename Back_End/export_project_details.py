@@ -172,19 +172,19 @@ def find_project_directory(project_code):
     Returns:
         str: Path to the project directory if it exists, or None if not found.
     """
-    logger.info(f"Finding project directory for project code: {project_code}")
+    logger.warning(f"Finding project directory for project code: {project_code}")
 
     # Handle "yy-xxxx" format (e.g., "24-0022")
     if len(project_code) == 7 and project_code[2] == '-':
         year, code = project_code[:2], project_code[3:]
-        year_full = "20" + year
-        logger.debug(f"Parsed format 'yy-xxxx': year={year_full}, code={code}")
+        year_full = f"20{year}"
+        logger.warning(f"Parsed format 'yy-xxxx': year={year_full}, code={code}")
 
     # Handle "xxxx-yy" format (e.g., "0022-23")
     elif len(project_code) == 7 and project_code[4] == '-':
         code, year = project_code[:4], project_code[5:]
-        year_full = "20" + year
-        logger.debug(f"Parsed format 'xxxx-yy': year={year_full}, code={code}")
+        year_full = f"20{year}"
+        logger.warning(f"Parsed format 'xxxx-yy': year={year_full}, code={code}")
 
     else:
         logger.error(f"Invalid project code format: {project_code}")
@@ -194,25 +194,29 @@ def find_project_directory(project_code):
     if len(code) == 4 and code.startswith('0'):
         # Remove the leading zero for codes like "0022" -> "022"
         code_formatted = code[1:]
-        logger.debug(f"Formatted 4-digit code with leading zero: {code} -> {code_formatted}")
+        logger.warning(f"Formatted 4-digit code with leading zero: {code} -> {code_formatted}")
     elif len(code) <= 3:
         # Ensure 3-digit format with leading zeros if necessary
         code_formatted = code.zfill(3)
-        logger.debug(f"Formatted code to 3 digits: {code} -> {code_formatted}")
+        logger.warning(f"Formatted code to 3 digits: {code} -> {code_formatted}")
     else:
         # Keep the code as is for 4-digit codes without leading zeros
         code_formatted = code
-        logger.debug(f"Formatted code (no changes needed): {code} -> {code_formatted}")
+        logger.warning(f"Formatted code (no changes needed): {code} -> {code_formatted}")
 
     # Construct the project folder name
     project_folder_name = f"{code_formatted}-{year}"
-    logger.debug(f"Constructed project folder name: {project_folder_name}")
+    logger.warning(f"Constructed project folder name: {project_folder_name}")
 
     # Construct the full path to the year directory
-    base_dir = config.COVER_LETTER_OUTPUT_DIR
+    base_dir = config.REPORT_DIRECTORY
+    logger.warning(f"base_dir is: {base_dir}")
+    
     year_folder = f"Jobs {year_full}"
+    logger.warning(f"The year_folder constructed is: {year_folder}")
+    
     year_directory = os.path.join(base_dir, year_folder)
-    logger.debug(f"Constructed year folder path: {year_directory}")
+    logger.warning(f"Constructed year folder path: {year_directory}")
 
     # Check if the year directory exists
     if not os.path.exists(year_directory):
@@ -222,12 +226,13 @@ def find_project_directory(project_code):
     # Search for the project directory within the year directory
     try:
         for dir_name in os.listdir(year_directory):
+            logger.warning(f"dir_name is: {dir_name}")
             if dir_name.startswith(project_folder_name):
                 project_directory = os.path.join(year_directory, dir_name)
                 logger.info(f"Found project directory: {project_directory}")
                 return project_directory
     except Exception as e:
-        logger.error(f"Error accessing project directory: {e}")
+        logger.warning(f"Error accessing project directory: {e}")
         return None
 
     # If the project directory is not found
