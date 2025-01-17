@@ -18,7 +18,7 @@
     </header>
     
     <div class="container">
-        <form action="{{ url_for('fetch_project_number_post') }}" method="POST" onsubmit="showLoading()">
+        <form action="{{ url_for('generate_ahj_report') }}" method="POST" onsubmit="showLoading()">
             <label for="project_number">Project Number:</label>
             <input type="text" id="project_number" name="project_number" required>
 
@@ -35,12 +35,12 @@
                 </ul>
             </div>
 
-            <button type="submit">Find Project</button>
+            <button type="submit">Generate AHJ Report</button>
             <button type="button" onclick="window.location.href='{{ url_for("select_user_email_get") }}'">Back</button>
         </form>
         
         <div id="loading-spinner" style="display:none;">
-            <p>Please wait, fetching project details...</p>
+            <p>Please wait, Generating AHJ Report</p>
             <div class="spinner"></div>
         </div>
     </div>
