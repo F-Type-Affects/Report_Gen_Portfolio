@@ -5,8 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Consulting Structural & Forensic Engineers</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/index_styling.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/flash_message.css') }}">
 </head>
 <body>
+    {% include 'flash_message.html' %}
     <header>
         <img src="/static/images/landing_banner.jpg" alt="Consulting Structural & Forensic Engineers" class="banner">
     </header>

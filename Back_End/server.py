@@ -8,8 +8,6 @@ import os
 import time
 from redis import Redis
 import requests
-import subprocess
-import webbrowser
 
 # Module imports
 from .auth import get_authorization_url, exchange_code_for_token, decode_id_token, get_user_info
@@ -45,17 +43,18 @@ setup_database(DATABASE_PATH)
 
 logger = logging.getLogger(__name__)
 
-##############################################################
-# load the home page of application from template
-
+"""App route to the home page of web application index.html""" 
 @app.route('/')
 def home():
     return render_template('index.html')
 
-############################
-# login and authentication app routes
+"""End of home route"""
 
-# build authentication url and open login page for user
+"""
+These app routes handle the login and authentication process to the BQE CORE Platform.
+This process grants access to the application for the user as well as saves the relevant user information
+in a simple SQLite table so they do not need to do this everytime they use the application
+"""
 @app.route('/login')
 def login():
     # Check client_id directly
@@ -165,8 +164,14 @@ def get_access_token():
         logging.error(f"Error retrieving access token: {e}")
         return jsonify({"error": "Failed to retrieve access token"}), 500
 
-#####################################################################
-# routes to select user's email which is required to retrieve user sub which is required for API calls to CORE
+"""
+End of Authentication routes
+"""
+
+"""
+These routes handle selecting the user email which is used to retrieve the user's sub, acces, and id tokens
+and required to query the BQE Core Platforms enbdpoints
+"""
 @app.route('/select_user_email_get', methods=['GET'])
 def select_user_email_get():
     emails = get_all_emails()  # Retrieve emails from the database
@@ -188,87 +193,26 @@ def select_user_email_post():
 
     return redirect(url_for('fetch_project_number_get', next=next_url))
 
-#####################################################################
-# GET and POST routes to enter a project number and to search a project by number
-# GET route to display project number entry form specific to export project details
+"""
+End of email app routes
+"""
+
+"""
+App route allows the other app routes to redirect back to the search project number template
+"""
 @app.route('/fetch_project_number', methods=['GET'])
 def fetch_project_number_get():
-    next_url = request.args.get('next', 'display_project_client_details')
+    next_url = request.args.get('next') 
     return render_template('select_project_number.html', next_url=next_url)
 
-# POST route to handle project number submission for export project details
-@app.route('/fetch_project_number_submit', methods=['POST'])
-def fetch_project_number_post():
-    selected_email = session.get('selected_email')
-    if not selected_email:
-        flash('No email selected. Please select an email first.', 'error')
-        return redirect(url_for('select_user_email_get'))
-    
-    project_number = request.form.get('project_number')
-    next_url = request.form.get('next_url')
-    
-    if not project_number:
-        flash('Please enter a project number.', 'error')
-        return redirect(url_for('fetch_project_number_get'))
-    
-    # Fetch project details from the backend using selected email and project number
-    project_data = get_project_by_code(project_number, selected_email)
-    logger.debug(f"project_data in fetch_project_number_submit: {project_data}")
-    
-    if not project_data:
-        flash('Project not found. Please check the Project ID and try again.', 'error')
-        return redirect(url_for('fetch_project_number_get'))
-    
-    # Create project and client objects from the retrieved data
-    project = Project.from_dict(project_data[0])
-    logger.debug(f"project in fetch_project_number_submit: {project}")
-    
-    client_data = get_client_by_id(project.client_id, selected_email)
-    logger.debug(f"client_data in fetch_project_number_submit: {client_data}")
-    
-    client = Client.from_dict(client_data[0]) if client_data else None
-    logger.debug(f"client in fetch_project_number_submit: {client}")
-    
-    # Store project and client details in the session for use on the details page
-    session['project_data'] = {
-        'code': project_number,
-        'name': project.name,
-        'purchase_order_number': project.purchase_order_number,
-        'billing_contact': project.billing_contact,
-        'street1': project.street1,
-        'street2': project.street2,
-        'city': project.city,
-        'state': project.state,
-        'zip_code': project.zip_code
-    }
-    session['client_data'] = {
-        'client_name': client.name,
-        'client_email': client.email,
-        'client_phone': client.phone,
-        'street1': client.street1,
-        'street2': client.street2,
-        'city': client.city,
-        'state': client.state,
-        'zip_code': client.zip_code
-    }
-
-    # Validate and determine the redirection target
-    allowed_routes = ['display_project_client_details', 'display_letter_details_get']
-    if next_url not in allowed_routes:
-        next_url = 'home'  # Fallback to home if invalid
-        
-    # Generate the redirection URL
-    redirection_url = url_for(next_url)
-    
-    logger.debug(f"Redirecting to {redirection_url} with project_number: {project_number}")
-    
-    # Redirect to the display page route
-    return redirect(redirection_url)
+"""
+"""
 
 """
-*************************************************************************************************
+App routes to query to the AHJ registry for IBC codes, query BQE endpoints for project and client data, and
+perform bing searches for web links and amendments to the codes provide
+Displays the information for user to confirm before exporting
 """
-"""Unified AHJ Process"""
 @app.route('/generate_ahj_report', methods=['POST'])
 def generate_ahj_report():
     """
@@ -352,7 +296,8 @@ def generate_ahj_report():
             if ahj_data and len(ahj_data) > 0:
                 ahj_name = ahj_data[0].get('AHJ Name')
                 if ahj_name:
-                    query = f"{ahj_name} building code amendments filetype:pdf"
+                    state = project.state
+                    query = f"{ahj_name}, {state} building code amendments filetype:pdf"
                     pdf_links, web_links = perform_bing_search(query, retries=5)
                     amendments["pdf_links"] = pdf_links
                     amendments["web_links"] = web_links
@@ -374,64 +319,9 @@ def generate_ahj_report():
         flash('An error occurred while generating the report. Please try again or generate the report in steps using the individual functions.', 'error')
         return redirect(url_for('home'))
 
-"""
-******************************************************************************************************************************
-"""
 """End of unified process"""
 
-#############################################################
-# app route to confirm project/client details storing them in the session and redirecting the user home
-@app.route('/confirm_project_details', methods=['POST'])
-def confirm_project_details():
-    # Retrieve project and client data from the session
-    project_data = session.get('project_data')
-    client_data = session.get('client_data')
-
-    if not project_data or not client_data:
-        flash("Project or Client data is missing. Please search for a project again.", 'error')
-        return redirect(url_for('fetch_project_number_get'))
-    
-    # Store confirmed project and client data in session
-    session['confirmed_project_data'] = project_data
-    session['confirmed_client_data'] = client_data
-
-    flash("Project and Client details confirmed and saved.", 'success')
-    return redirect(url_for('home'))
-
-#####################################################
-# app routes to search AHJ registry and Bing for amendments to build codes
-
-@app.route('/search_amendments', methods=['POST'])
-def search_amendments():
-    # Get the AHJ name from the session or address
-    ahj_data = session.get('ahj_data')
-    
-    if not ahj_data:
-        flash("No AHJ data found. Please go back and perform a new search.")
-        return redirect(url_for('fetch_ahj_address_get'))
-
-    # Get the AHJ name for querying amendments
-    ahj_name = ahj_data[0]['AHJ Name'] if ahj_data else session.get('address')
-
-    # Perform Bing search for both PDFs and website links
-    query = f"{ahj_name} Building Code Amendments"
-    pdf_links, web_links = perform_bing_search(query)
-
-    # Store the amendment links in session for future use
-    session['amendment_pdf_links'] = pdf_links
-    session['amendment_web_links'] = web_links
-
-    if not pdf_links and not web_links:
-        flash("No amendments found.")
-        return redirect(url_for('fetch_ahj_address_get'))
-
-    # Render the results to the user
-    return render_template('display_amendment_results.html', pdf_links=pdf_links, web_links=web_links)
-
-
-###############################################################
-# app routes to handle exporting the project, client, AHJ, and amendment info fetched by the user to a csv/excel workbook
-
+"""App routes to display AHJ report details and to export the reports to the appropriate project directory"""
 @app.route('/display_report_details', methods=['GET'])
 def display_report_details_get():
     # Retrieve all necessary data from the session
@@ -491,114 +381,141 @@ def export_report_post():
         flash("Failed to save workbook. Please try again.", 'error')
         return redirect(url_for('display_report_details_get'))
 
+"""App route to generate cover letter.
+   Allows for all process be to be done in any order
+"""
+@app.route('/generate_cover_letter', methods=['POST'])
+def generate_cover_letter_route():
+    """
+    Checks if the relevant data is already stored in the session and uses it if it is found
+    If the data isn't present it queries it and stores it in the session to be used by this process and so other
+    processes can use it.
+    """
+    try:
+        # Get required session data
+        selected_email = session.get('selected_email')
+        if not selected_email:
+            flash('No email selected. Please select an email first.', 'error')
+            return redirect(url_for('select_user_email_get'))
 
-##########################################
-# helper functions to get user sub for API calls
+        project_number = request.form.get('project_number')
+        if not project_number:
+            flash('Please enter a project number.', 'error')
+            return redirect(url_for('fetch_project_number_get'))
+
+        # Check if we already have the data in session
+        project_data = session.get('project_data')
+        client_data = session.get('client_data')
+
+        # If no session data, fetch project and client data
+        if not project_data or not client_data:
+            logger.info("No session data found, fetching project and client data")
+            
+            # Fetch project details
+            project_data = get_project_by_code(project_number, selected_email)
+            if not project_data:
+                flash('Project not found. Please check the Project ID and try again.', 'error')
+                return redirect(url_for('fetch_project_number_get'))
+
+            # Create Project instance
+            project = Project.from_dict(project_data[0])
+
+            # Get client data
+            client_data = get_client_by_id(project.client_id, selected_email)
+            if not client_data:
+                flash('Client data not found.', 'error')
+                return redirect(url_for('fetch_project_number_get'))
+
+            client = Client.from_dict(client_data[0])
+
+            # Format and store data in session
+            session['project_data'] = {
+                'code': project_number,
+                'name': project.name,
+                'purchase_order_number': project.purchase_order_number,
+                'billing_contact': project.billing_contact,
+                'street1': project.street1,
+                'street2': project.street2,
+                'city': project.city,
+                'state': project.state,
+                'zip_code': project.zip_code
+            }
+            
+            session['client_data'] = {
+                'client_name': client.name,
+                'client_email': client.email,
+                'client_phone': client.phone,
+                'street1': client.street1,
+                'street2': client.street2,
+                'city': client.city,
+                'state': client.state,
+                'zip_code': client.zip_code
+            }
+
+        # Get user details for display
+        user_details = get_user_details_by_email(selected_email)
+        if not user_details:
+            flash('User details not found.', 'error')
+            return redirect(url_for('home'))
+
+        # Display confirmation page
+        return render_template('display_letter_details.html',
+                             project_data=session['project_data'],
+                             client_data=session['client_data'],
+                             first_name=user_details.get('first_name'),
+                             last_name=user_details.get('last_name'))
+
+    except Exception as e:
+        logger.error(f"Error preparing cover letter data: {str(e)}")
+        flash('An error occurred while preparing the cover letter. Please try again.', 'error')
+        return redirect(url_for('home'))
+
+@app.route('/generate_cover_letter_confirmed', methods=['POST'])
+def generate_cover_letter_confirmed():
+    """
+    Second route to handle actual cover letter generation after confirmation.
+    """
+    try:
+        selected_email = session.get('selected_email')
+        user_details = get_user_details_by_email(selected_email)
+        
+        result = generate_cover_letter(
+            session['project_data'],
+            session['client_data'],
+            user_details.get('first_name'),
+            user_details.get('last_name')
+        )
+
+        if result:
+            flash('Cover letter generated successfully.', 'success')
+        else:
+            flash('Failed to generate cover letter.', 'error')
+
+        return redirect(url_for('home'))
+
+    except Exception as e:
+        logger.error(f"Error generating cover letter: {str(e)}")
+        flash('An error occurred while generating the cover letter. Please try again.', 'error')
+        return redirect(url_for('home'))
+
+"""End of Cover Letter specefic app route
+"""
+
+"""Helper functions to get specefic user data for calls to endpoints"""
 def login_user(sub):
     session['user_sub'] = sub  # Store the sub in session after successful login
 
 def get_user_sub():
     return session.get('user_sub')  # Retrieve the sub when needed
 
-###################################################################################
-# App routes specefic to creating calculation cover letter
-####################################################################################
-
-# Get Route to display project / client details to user and allow confirmation
-@app.route('/display_letter_details_get', methods=['GET'])
-def display_letter_details_get():
-    # Retrieve data from session
-    project_data = session.get('project_data')
-    client_data = session.get('client_data')
-    selected_email = session.get('selected_email')
-
-    # Check if all necessary data is present
-    if not all([project_data, client_data, selected_email]):
-        flash('Missing data. Please start over.', 'error')
-        return redirect(url_for('home'))
-
-    # Fetch user's first and last name
-    user_details = get_user_details_by_email(selected_email)
-
-    if not user_details:
-        flash('User details not found.', 'error')
-        return redirect(url_for('home'))
-
-    first_name = user_details.get('first_name')
-    last_name = user_details.get('last_name')
-
-    return render_template('display_letter_details.html', 
-                           project_data=project_data, 
-                           client_data=client_data, 
-                           first_name=first_name, 
-                           last_name=last_name)
-    
-# POST route handles confirmation, generates cover letter, and saves it
-@app.route('/display_letter_details_post', methods=['POST'])
-def display_letter_details_post():
-    # Retrieve data from session
-    project_data = session.get('project_data')
-    client_data = session.get('client_data')
-    selected_email = session.get('selected_email')
-
-    # Check if all necessary data is present
-    if not all([project_data, client_data, selected_email]):
-        flash('Missing data. Please start over.', 'error')
-        return redirect(url_for('home'))
-
-    # Fetch user's first and last name
-    user_details = get_user_details_by_email(selected_email)
-
-    if not user_details:
-        flash('User details not found.', 'error')
-        return redirect(url_for('home'))
-
-    first_name = user_details.get('first_name')
-    last_name = user_details.get('last_name')
-
-    # Generate the cover letter
-    result = generate_cover_letter(project_data, client_data, first_name, last_name)
-
-    if result:
-        flash('Cover letter generated successfully.', 'success')
-    else:
-        flash('Failed to generate cover letter.', 'error')
-
-    return redirect(url_for('home'))
-
-
-##################################
-# app routes to launch application and exit application
 
 # clears all session data for the user and returns them to the home page
-# should close app but not working
 @app.route('/exit_app')
 def exit_app():
     session.clear()  # Clear all session data for the user
     flash("You have been logged out. Session data cleared.")
     return redirect(url_for('home'))
 
-
-###############################################################
-# comented out launch logic and entry point since in production this will be handled by Gunicorn and NGISX
-# should launch app in its own browser
-# is not working
-def open_browser():
-    time.sleep(2)  # Allow the Flask app to start
-    url = 'http://127.0.0.1:8000'
-    
-    # Command to open Chrome in app mode in a new window
-    chrome_command = [
-        "chrome.exe",  # Replace with "chrome" or "chrome.exe" if on Windows
-        "--new-window",
-        f"--app={url}"
-    ]
-    
-    try:
-        subprocess.Popen(chrome_command)  # Open Chrome in standalone mode
-    except Exception as e:
-        logging.error(f"Failed to open Chrome in standalone mode: {e}")
-        webbrowser.open(url)  # Fallback to the default browser
 
 # entry point
 if __name__ == '__main__':

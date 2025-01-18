@@ -5,8 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Confirm Project Report Details</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/display_report_details.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/flash_message.css') }}">
 </head>
 <body>
+    {% include 'flash_message.html' %}
     <div class="container">
         <h2>Confirm Project Report Details</h2>
 
