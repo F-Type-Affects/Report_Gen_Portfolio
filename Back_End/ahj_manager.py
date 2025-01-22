@@ -156,7 +156,7 @@ def perform_bing_search(query, retries=5):
     # Perform search for general websites
     web_results = perform_search(query_web)
     if web_results:
-        web_links = [result.get('url', '') for result in web_results[:5]]  # Limit to top 5 web links
+        web_links = [result.get('url', '') for result in web_results[:8]]  # Limit to top 8 web links
         logger.info(f"Successfully retrieved {len(web_links)} valid web links.")
     else:
         web_links = []

@@ -5,8 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Select User Email</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/select_user_email.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/flash_message.css') }}">
 </head>
 <body>
+    {% include 'flash_message.html' %}
     <header>
         <h1>Select Your Email</h1>
     </header>

@@ -47,7 +47,16 @@ input[type="text"] {
     line-height: 1.5;
 }
 
-button {
+/* Add to select_project_number.css */
+
+.button-group {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.btn {
     width: 100%;
     padding: 12px;
     background-color: #007ACC;
@@ -56,19 +65,20 @@ button {
     border: none;
     border-radius: 5px;
     cursor: pointer;
+    transition: background-color 0.3s ease;
 }
 
-button:hover {
+.btn:hover {
     background-color: #005F9E;
 }
 
-.back-btn {
-    margin-top: 10px;
+/* Modify the existing back-btn class to match our new button styling */
+.btn.back-btn {
     background-color: #ccc;
     color: #333;
 }
 
-.back-btn:hover {
+.btn.back-btn:hover {
     background-color: #999;
 }
 

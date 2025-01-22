@@ -5,8 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Consulting Structural & Forensic Engineers</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/index_styling.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/flash_message.css') }}">
 </head>
 <body>
+    {% include 'flash_message.html' %}
     <header>
         <img src="/static/images/landing_banner.jpg" alt="Consulting Structural & Forensic Engineers" class="banner">
     </header>
@@ -24,10 +26,8 @@
     <div class="container">
         <nav class="sidebar">
             <a href="{{ url_for('login') }}" class="btn">Login & Authenticate</a>
-            <a href="{{ url_for('select_user_email_get') }}?next=display_project_client_details" class="btn">Fetch Project Details</a>
-            <a href="{{ url_for('fetch_ahj_address_get') }}" class="btn btn-primary">Find AHJ & Amendments</a>
-            <a href="{{ url_for('display_report_details_get') }}" class="btn btn-primary">Export AHJ Report</a>
-            <a href="{{ url_for('select_user_email_get') }}?next=display_letter_details_get" class="btn btn-primary">Generate Cover Letter</a>
+            <a href="{{ url_for('select_user_email_get') }}?next=select_project_number" class="btn">Generate AHJ Report</a>
+            <a href="{{ url_for('select_user_email_get') }}?next=display_letter_details_get" class="btn">Generate Cover Letter</a>
             <button onclick="exitApp()" class="btn">Clear Session Data</button>
         </nav>
         
@@ -79,7 +79,6 @@
             fetch('/exit_app')
                 .then(response => {
                     if (response.ok) {
-                        // Clear session and close the browser tab
                         window.close();
                     }
                 })

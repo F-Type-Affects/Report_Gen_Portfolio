@@ -27,18 +27,20 @@ class Client:
         # Extract email and phone from communications list
         email = ""
         phone = ""
-        communications = address.get('communications', [])
+        communications = address.get('communications', []) or []
 
         # Iterate through communications to find Email, Phone, and Mobile
         for contact in communications:
             type_name = contact.get('typeName', '').lower()
-            value = contact.get('value', '').strip()
+            value = contact.get('value', '')
+            if value:
+                value = value.strip()
             if type_name == 'email' and not email:
-                email = value
+                email = value or ''
             elif type_name == 'phone' and not phone:
-                phone = value
+                phone = value or ''
             elif type_name == 'mobile' and not phone:
-                phone = value
+                phone = value or ''
 
         return cls(
             client_id=str(data.get('id', '')),

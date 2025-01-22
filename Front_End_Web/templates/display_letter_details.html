@@ -6,8 +6,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Confirm Letter Details</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/display_letter_details.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/flash_message.css') }}">
 </head>
 <body>
+    {% include 'flash_message.html' %}
     <header>
         <h1>Confirm Letter Details</h1>
     </header>
@@ -18,9 +20,9 @@
         <p><strong>Project Number:</strong> {{ project_data['code'] }}</p>
         <p><strong>By:</strong> {{ first_name }} {{ last_name }}</p>
         
-        <form method="POST" action="{{ url_for('display_letter_details_post') }}">
+        <form method="POST" action="{{ url_for('generate_cover_letter_confirmed') }}">
             <button type="submit">Confirm</button>
-            <button type="button" onclick="window.location.href='{{ url_for('select_user_email_get', next='display_letter_details_get') }}'">Search Again</button>
+            <button type="button" onclick="window.location.href='{{ url_for('fetch_project_number_get') }}'">Search Again</button>
             <button type="button" onclick="window.location.href='{{ url_for('home') }}'">Home</button>
         </form>
     </div>

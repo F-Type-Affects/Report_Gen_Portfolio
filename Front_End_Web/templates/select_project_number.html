@@ -1,3 +1,4 @@
+<!-- Updated form section in select_project_number.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -5,24 +6,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Select Project Number</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/select_project_number.css') }}">
-
-    <script>
-        function showLoading() {
-            document.getElementById("loading-spinner").style.display = "block";
-        }
-    </script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/flash_message.css') }}">
 </head>
 <body>
+    {% include 'flash_message.html' %}
     <header>
         <h1>Enter Project Number</h1>
     </header>
     
     <div class="container">
-        <form action="{{ url_for('fetch_project_number_post') }}" method="POST" onsubmit="showLoading()">
+        <form id="projectForm" method="POST">
             <label for="project_number">Project Number:</label>
             <input type="text" id="project_number" name="project_number" required>
-
-            <input type="hidden" name="next_url" value="{{ next_url }}">
             
             <div class="instructions">
                 <h4>Formatting Instructions</h4>
@@ -34,15 +29,41 @@
                     <li>ID 1067 should be 1067-17 or 24-1067</li>
                 </ul>
             </div>
-
-            <button type="submit">Find Project</button>
-            <button type="button" onclick="window.location.href='{{ url_for("select_user_email_get") }}'">Back</button>
+    
+            <div class="button-group">
+                <button type="button" onclick="submitForm('generate_ahj_report')" class="btn">Generate AHJ Report</button>
+                <button type="button" onclick="submitForm('generate_cover_letter')" class="btn">Generate Cover Letter</button>
+                <button type="button" onclick="window.location.href='{{ url_for('select_user_email_get') }}'" class="btn back-btn">Back</button>
+            </div>
+            
+            <div id="loading-spinner" style="display:none;">
+                <p>Processing request, please wait...</p>
+                <div class="spinner"></div>
+            </div>
         </form>
-        
-        <div id="loading-spinner" style="display:none;">
-            <p>Please wait, fetching project details...</p>
-            <div class="spinner"></div>
-        </div>
     </div>
+
+    <script>
+        function submitForm(action) {
+            const form = document.getElementById('projectForm');
+            const projectNumber = document.getElementById('project_number').value;
+            
+            if (!projectNumber) {
+                alert('Please enter a project number');
+                return;
+            }
+        
+            if (action === 'generate_ahj_report') {
+                form.action = "{{ url_for('generate_ahj_report') }}";
+            } else if (action === 'generate_cover_letter') {
+                form.action = "{{ url_for('generate_cover_letter_route') }}";
+            }
+            
+            // Show loading spinner
+            document.getElementById('loading-spinner').style.display = 'block';
+            
+            form.submit();
+        }
+    </script>
 </body>
 </html>
