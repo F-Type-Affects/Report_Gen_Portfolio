@@ -164,72 +164,76 @@ def save_workbook(workbook, project_code):
 
 def find_project_directory(project_code):
     """
-    Finds the project directory based on the project code format.
-
+    Finds project directory for both General and Pool projects.
+    
     Args:
-        project_code (str): Project code in format "yy-xxxx" or "xxxx-yy".
-
+        project_code (str): Project code in formats:
+            General: "yy-xxxx" or "xxxx-yy"
+            Pool: "yy-Pxxx"
+            
     Returns:
-        str: Path to the project directory if it exists, or None if not found.
+        str: Path to project directory if found, None otherwise
     """
     logger.info(f"Finding project directory for project code: {project_code}")
-
-    # Handle "yy-xxxx" format (e.g., "24-0022")
-    if len(project_code) == 7 and project_code[2] == '-':
-        year, code = project_code[:2], project_code[3:]
-        year_full = "20" + year
-        logger.debug(f"Parsed format 'yy-xxxx': year={year_full}, code={code}")
-
-    # Handle "xxxx-yy" format (e.g., "0022-23")
-    elif len(project_code) == 7 and project_code[4] == '-':
-        code, year = project_code[:4], project_code[5:]
-        year_full = "20" + year
-        logger.debug(f"Parsed format 'xxxx-yy': year={year_full}, code={code}")
-
-    else:
-        logger.error(f"Invalid project code format: {project_code}")
-        return None
-
-    # Format the project code to match directory naming
-    if len(code) == 4 and code.startswith('0'):
-        # Remove the leading zero for codes like "0022" -> "022"
-        code_formatted = code[1:]
-        logger.debug(f"Formatted 4-digit code with leading zero: {code} -> {code_formatted}")
-    elif len(code) <= 3:
-        # Ensure 3-digit format with leading zeros if necessary
-        code_formatted = code.zfill(3)
-        logger.debug(f"Formatted code to 3 digits: {code} -> {code_formatted}")
-    else:
-        # Keep the code as is for 4-digit codes without leading zeros
-        code_formatted = code
-        logger.debug(f"Formatted code (no changes needed): {code} -> {code_formatted}")
-
-    # Construct the project folder name
-    project_folder_name = f"{code_formatted}-{year}"
-    logger.debug(f"Constructed project folder name: {project_folder_name}")
-
-    # Construct the full path to the year directory
-    base_dir = config.COVER_LETTER_OUTPUT_DIR
-    year_folder = f"Jobs {year_full}"
-    year_directory = os.path.join(base_dir, year_folder)
-    logger.debug(f"Constructed year folder path: {year_directory}")
-
-    # Check if the year directory exists
-    if not os.path.exists(year_directory):
-        logger.warning(f"Year folder not found: {year_directory}")
-        return None
-
-    # Search for the project directory within the year directory
+    
+    # Check if this is a pool project
+    is_pool = 'P' in project_code.upper()
+    
     try:
+        if is_pool:
+            if len(project_code) < 6 or project_code[2] != '-':
+                logger.error(f"Invalid pool project code format: {project_code}")
+                return None
+                
+            year = project_code[:2]
+            code = project_code[4:].lstrip('0')  # Remove leading zeros
+            year_full = "20" + year
+            
+            # Updated pool paths to use root Pools directory
+            pools_dir = os.path.join('J:', 'Pools')
+            year_folder = f"Pools-{year_full}"
+            year_directory = os.path.join(pools_dir, year_folder)
+            
+            # Updated pool project folder prefix format
+            project_folder_prefix = f"{code}-{year}P"
+            
+        else:
+            # Existing general project logic remains unchanged
+            if len(project_code) == 7 and project_code[2] == '-':
+                year, code = project_code[:2], project_code[3:]
+                year_full = "20" + year
+            elif len(project_code) == 7 and project_code[4] == '-':
+                code, year = project_code[:4], project_code[5:]
+                year_full = "20" + year
+            else:
+                logger.error(f"Invalid project code format: {project_code}")
+                return None
+
+            if len(code) == 4 and code.startswith('0'):
+                code_formatted = code[1:]
+            elif len(code) <= 3:
+                code_formatted = code.zfill(3)
+            else:
+                code_formatted = code
+
+            base_dir = config.COVER_LETTER_OUTPUT_DIR
+            year_folder = f"Jobs {year_full}"
+            year_directory = os.path.join(base_dir, year_folder)
+            project_folder_prefix = f"{code_formatted}-{year}"
+
+        if not os.path.exists(year_directory):
+            logger.warning(f"Year folder not found: {year_directory}")
+            return None
+
         for dir_name in os.listdir(year_directory):
-            if dir_name.startswith(project_folder_name):
+            if dir_name.startswith(project_folder_prefix):
                 project_directory = os.path.join(year_directory, dir_name)
                 logger.info(f"Found project directory: {project_directory}")
                 return project_directory
+
+        logger.warning(f"Project directory not found for code: {project_code}")
+        return None
+
     except Exception as e:
         logger.error(f"Error accessing project directory: {e}")
         return None
-
-    # If the project directory is not found
-    logger.warning(f"Project directory not found for project code: {project_code}")
-    return None

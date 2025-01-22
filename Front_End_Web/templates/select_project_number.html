@@ -15,7 +15,7 @@
     </header>
     
     <div class="container">
-        <form id="projectForm" method="POST" onsubmit="return handleFormSubmit()">
+        <form id="projectForm" method="POST">
             <label for="project_number">Project Number:</label>
             <input type="text" id="project_number" name="project_number" required>
             
@@ -29,7 +29,7 @@
                     <li>ID 1067 should be 1067-17 or 24-1067</li>
                 </ul>
             </div>
-
+    
             <div class="button-group">
                 <button type="button" onclick="submitForm('generate_ahj_report')" class="btn">Generate AHJ Report</button>
                 <button type="button" onclick="submitForm('generate_cover_letter')" class="btn">Generate Cover Letter</button>
