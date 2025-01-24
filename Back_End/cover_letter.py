@@ -14,6 +14,10 @@ logger = logging.getLogger(__name__)
 NAMESPACE = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main'
 namespaces = {'w': NAMESPACE}
 
+#Directories to save cover letters to:
+general_projects = config.COVER_LETTER_OUTPUT_DIR
+pool_projects = config.COVER_LETTER_POOLS_OUTPUT
+
 def replace_content_control_text(doc, tag, new_text):
     """
     Replace the text inside a content control with the given tag and apply formatting.
@@ -73,17 +77,13 @@ def replace_content_control_text(doc, tag, new_text):
 
 def generate_cover_letter(project_data, client_data, first_name, last_name):
     try:
-        # Path to the template
         template_path = config.COVER_LETTER_TEMPLATE_PATH
+        logger.info(f"Template path: {template_path}")
         if not os.path.exists(template_path):
             logger.error(f"Template not found at {template_path}")
             return False
 
-        # Open the template
         doc = Document(template_path)
-        logger.info(f"Opened template at {template_path}")
-
-        # Define replacements using content control tags
         replacements = {
             'Project': project_data['name'],
             'Location': f"{project_data['street1']} {project_data['street2']}, {project_data['city']}, {project_data['state']} {project_data['zip_code']}",
@@ -92,105 +92,119 @@ def generate_cover_letter(project_data, client_data, first_name, last_name):
             'By': f"{first_name} {last_name}"
         }
 
-        # Replace text in content controls
         for tag, value in replacements.items():
             replace_content_control_text(doc, tag, value)
 
-        # Find the project directory
         project_code = project_data['code']
+        logger.info(f"Looking for project directory with code: {project_code}")
         project_directory = find_project_directory_letter(project_code)
+        logger.info(f"Found project directory: {project_directory}")
+        
         if not project_directory:
-            logger.error(f"Project directory not found for project code: {project_code}")
+            logger.error(f"Project directory not found for code: {project_code}")
             return False
 
-        # Construct the path to the Calculations directory
-        calculations_directory = os.path.join(project_directory, "ENG", "Calculations")
-        os.makedirs(calculations_directory, exist_ok=True)
+        is_pool = 'P' in project_code.upper()
+        if is_pool:
+            calculations_directory = os.path.join(project_directory, "Eng")
+            logger.info(f"Pool project detected, using directory: {calculations_directory}")
+        else:
+            calculations_directory = os.path.join(project_directory, "ENG", "Calculations")
+            logger.info(f"General project detected, using directory: {calculations_directory}")
+            
+        if not os.path.exists(calculations_directory):
+            logger.error(f"Required directory does not exist: {calculations_directory}")
+            return False
 
-        # Path to save the new cover letter
         output_filename = f"calc_cover_{project_code}.docx"
         output_path = os.path.join(calculations_directory, output_filename)
+        logger.info(f"Attempting to save file at: {output_path}")
 
-        # Save the modified document
         doc.save(output_path)
-        logger.info(f"Cover letter generated at {output_path}")
+        logger.info(f"File saved successfully at: {output_path}")
+        logger.info(f"File exists after save: {os.path.exists(output_path)}")
 
         return True
 
     except Exception as e:
-        logger.error(f"Error generating cover letter: {e}")
+        logger.error(f"Error generating cover letter: {str(e)}")
+        logger.exception("Full traceback:")
         return False
 
 
 def find_project_directory_letter(project_code):
     """
-    Finds the project directory based on the project code format.
-
+    Finds project directory for both General and Pool projects.
+    
     Args:
-        project_code (str): Project code in format "yy-xxxx" or "xxxx-yy".
-
+        project_code (str): Project code in formats:
+            General: "yy-xxxx" or "xxxx-yy"
+            Pool: "yy-Pxxx"
+            
     Returns:
-        str: Path to the project directory if it exists, or None if not found.
+        str: Path to project directory if found, None otherwise
     """
     logger.info(f"Finding project directory for project code: {project_code}")
-
-    # Handle "yy-xxxx" format (e.g., "24-0022")
-    if len(project_code) == 7 and project_code[2] == '-':
-        year, code = project_code[:2], project_code[3:]
-        year_full = "20" + year
-        logger.debug(f"Parsed format 'yy-xxxx': year={year_full}, code={code}")
-
-    # Handle "xxxx-yy" format (e.g., "0022-23")
-    elif len(project_code) == 7 and project_code[4] == '-':
-        code, year = project_code[:4], project_code[5:]
-        year_full = "20" + year
-        logger.debug(f"Parsed format 'xxxx-yy': year={year_full}, code={code}")
-
-    else:
-        logger.error(f"Invalid project code format: {project_code}")
-        return None
-
-    # Format the project code to match directory naming
-    if len(code) == 4 and code.startswith('0'):
-        # Remove the leading zero for codes like "0022" -> "022"
-        code_formatted = code[1:]
-        logger.debug(f"Formatted 4-digit code with leading zero: {code} -> {code_formatted}")
-    elif len(code) <= 3:
-        # Ensure 3-digit format with leading zeros if necessary
-        code_formatted = code.zfill(3)
-        logger.debug(f"Formatted code to 3 digits: {code} -> {code_formatted}")
-    else:
-        # Keep the code as is for 4-digit codes without leading zeros
-        code_formatted = code
-        logger.debug(f"Formatted code (no changes needed): {code} -> {code_formatted}")
-
-    # Construct the project folder name
-    project_folder_name = f"{code_formatted}-{year}"
-    logger.debug(f"Constructed project folder name: {project_folder_name}")
-
-    # Construct the full path to the year directory
-    base_dir = config.COVER_LETTER_OUTPUT_DIR
-    year_folder = f"Jobs {year_full}"
-    year_directory = os.path.join(base_dir, year_folder)
-    logger.debug(f"Constructed year folder path: {year_directory}")
-
-    # Check if the year directory exists
-    if not os.path.exists(year_directory):
-        logger.warning(f"Year folder not found: {year_directory}")
-        return None
-
-    # Search for the project directory within the year directory
+    
+    # Check if this is a pool project
+    is_pool = 'P' in project_code.upper()
+    
     try:
+        if is_pool:
+            if len(project_code) < 6 or project_code[2] != '-':
+                logger.error(f"Invalid pool project code format: {project_code}")
+                return None
+                
+            year = project_code[:2]
+            code = project_code[4:].lstrip('0')  # Remove leading zeros
+            year_full = "20" + year
+            
+            # Use POOL_DIR for pool projects
+            year_folder = f"Pools-{year_full}"
+            year_directory = os.path.join(pool_projects, year_folder)
+            
+            # Pool project folder prefix format
+            project_folder_prefix = f"{code}-{year}P"
+            
+        else:
+            # General project logic
+            if len(project_code) == 7 and project_code[2] == '-':
+                year, code = project_code[:2], project_code[3:]
+                year_full = "20" + year
+            elif len(project_code) == 7 and project_code[4] == '-':
+                code, year = project_code[:4], project_code[5:]
+                year_full = "20" + year
+            else:
+                logger.error(f"Invalid project code format: {project_code}")
+                return None
+
+            if len(code) == 4 and code.startswith('0'):
+                code_formatted = code[1:]
+            elif len(code) <= 3:
+                code_formatted = code.zfill(3)
+            else:
+                code_formatted = code
+
+            # Use BASE_DIR for general projects
+            year_folder = f"Jobs {year_full}"
+            year_directory = os.path.join(general_projects, year_folder)
+            project_folder_prefix = f"{code_formatted}-{year}"
+
+        if not os.path.exists(year_directory):
+            logger.warning(f"Year folder not found: {year_directory}")
+            return None
+
+        # Search for matching project directory
         for dir_name in os.listdir(year_directory):
-            if dir_name.startswith(project_folder_name):
+            if dir_name.startswith(project_folder_prefix):
                 project_directory = os.path.join(year_directory, dir_name)
                 logger.info(f"Found project directory: {project_directory}")
                 return project_directory
+
+        logger.warning(f"Project directory not found for code: {project_code}")
+        return None
+
     except Exception as e:
         logger.error(f"Error accessing project directory: {e}")
         return None
-
-    # If the project directory is not found
-    logger.warning(f"Project directory not found for project code: {project_code}")
-    return None
 

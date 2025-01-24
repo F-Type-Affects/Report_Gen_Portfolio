@@ -384,73 +384,68 @@ def export_report_post():
 """App route to generate cover letter.
    Allows for all process be to be done in any order
 """
+
 @app.route('/generate_cover_letter', methods=['POST'])
 def generate_cover_letter_route():
     """
-    Checks if the relevant data is already stored in the session and uses it if it is found
-    If the data isn't present it queries it and stores it in the session to be used by this process and so other
-    processes can use it.
+    Handles cover letter generation requests. For each request, it:
+    1. Validates the user session and input
+    2. Fetches fresh project and client data for the requested project number
+    3. Updates the session with the new data
+    4. Displays the confirmation page with current project details
     """
     try:
-        # Get required session data
+        # Validate user session
         selected_email = session.get('selected_email')
         if not selected_email:
             flash('No email selected. Please select an email first.', 'error')
             return redirect(url_for('select_user_email_get'))
 
+        # Get and validate project number from form
         project_number = request.form.get('project_number')
         if not project_number:
             flash('Please enter a project number.', 'error')
             return redirect(url_for('fetch_project_number_get'))
 
-        # Check if we already have the data in session
-        project_data = session.get('project_data')
-        client_data = session.get('client_data')
+        # Always fetch fresh project data for the requested project number
+        logger.info(f"Fetching data for project number: {project_number}")
+        project_data = get_project_by_code(project_number, selected_email)
+        if not project_data:
+            flash('Project not found. Please check the Project ID and try again.', 'error')
+            return redirect(url_for('fetch_project_number_get'))
 
-        # If no session data, fetch project and client data
-        if not project_data or not client_data:
-            logger.info("No session data found, fetching project and client data")
-            
-            # Fetch project details
-            project_data = get_project_by_code(project_number, selected_email)
-            if not project_data:
-                flash('Project not found. Please check the Project ID and try again.', 'error')
-                return redirect(url_for('fetch_project_number_get'))
+        # Create Project instance and fetch related client data
+        project = Project.from_dict(project_data[0])
+        client_data = get_client_by_id(project.client_id, selected_email)
+        if not client_data:
+            flash('Client data not found.', 'error')
+            return redirect(url_for('fetch_project_number_get'))
 
-            # Create Project instance
-            project = Project.from_dict(project_data[0])
+        client = Client.from_dict(client_data[0])
 
-            # Get client data
-            client_data = get_client_by_id(project.client_id, selected_email)
-            if not client_data:
-                flash('Client data not found.', 'error')
-                return redirect(url_for('fetch_project_number_get'))
-
-            client = Client.from_dict(client_data[0])
-
-            # Format and store data in session
-            session['project_data'] = {
-                'code': project_number,
-                'name': project.name,
-                'purchase_order_number': project.purchase_order_number,
-                'billing_contact': project.billing_contact,
-                'street1': project.street1,
-                'street2': project.street2,
-                'city': project.city,
-                'state': project.state,
-                'zip_code': project.zip_code
-            }
-            
-            session['client_data'] = {
-                'client_name': client.name,
-                'client_email': client.email,
-                'client_phone': client.phone,
-                'street1': client.street1,
-                'street2': client.street2,
-                'city': client.city,
-                'state': client.state,
-                'zip_code': client.zip_code
-            }
+        # Update session with new project and client data
+        session['project_data'] = {
+            'code': project_number,
+            'name': project.name,
+            'purchase_order_number': project.purchase_order_number,
+            'billing_contact': project.billing_contact,
+            'street1': project.street1,
+            'street2': project.street2,
+            'city': project.city,
+            'state': project.state,
+            'zip_code': project.zip_code
+        }
+        
+        session['client_data'] = {
+            'client_name': client.name,
+            'client_email': client.email,
+            'client_phone': client.phone,
+            'street1': client.street1,
+            'street2': client.street2,
+            'city': client.city,
+            'state': client.state,
+            'zip_code': client.zip_code
+        }
 
         # Get user details for display
         user_details = get_user_details_by_email(selected_email)
@@ -458,7 +453,10 @@ def generate_cover_letter_route():
             flash('User details not found.', 'error')
             return redirect(url_for('home'))
 
-        # Display confirmation page
+        # Add debug logging to verify session data
+        logger.info(f"Updated session with project number: {session['project_data']['code']}")
+
+        # Display confirmation page with current data
         return render_template('display_letter_details.html',
                              project_data=session['project_data'],
                              client_data=session['client_data'],
