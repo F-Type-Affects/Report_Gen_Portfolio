@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ASCE Summary Details</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/display_summary_details.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/flash_message.css') }}">
+</head>
+<body>
+    {% include 'flash_message.html' %}
+    <div class="container">
+        <h2>ASCE Summary Details</h2>
+
+        <!-- Project Info Header -->
+        <div class="project-info">
+            <p><strong>Project ID:</strong> {{ project_data.code }}</p>
+            <p><strong>Project Address:</strong> 
+                {{ project_data.street1 }}, 
+                {% if project_data.street2 %}
+                    {{ project_data.street2 }},
+                {% endif %}
+                {{ project_data.city }}, {{ project_data.state }}, {{ project_data.zip_code }}
+            </p>
+        </div>
+
+        <!-- ASCE Summary Data -->
+        <div class="summary-tables">
+            <!-- Wind Data -->
+            <div class="table-section">
+                <h3>Wind Data</h3>
+                <table>
+                    <tr>
+                        <th>Parameter</th>
+                        <th>Value</th>
+                        <th>Unit</th>
+                    </tr>
+                    <tr>
+                        <td>Wind Speed</td>
+                        <td>{{ summary_data.wind_data.wind_speed }}</td>
+                        <td>Vmph</td>
+                    </tr>
+                    <tr>
+                        <td>10-year MRI</td>
+                        <td>{{ summary_data.wind_data.ten_year_mri }}</td>
+                        <td>Vmph</td>
+                    </tr>
+                    <tr>
+                        <td>25-year MRI</td>
+                        <td>{{ summary_data.wind_data.twenty_five_year_mri }}</td>
+                        <td>Vmph</td>
+                    </tr>
+                    <tr>
+                        <td>50-year MRI</td>
+                        <td>{{ summary_data.wind_data.fifty_year_mri }}</td>
+                        <td>Vmph</td>
+                    </tr>
+                    <tr>
+                        <td>100-year MRI</td>
+                        <td>{{ summary_data.wind_data.hundred_year_mri }}</td>
+                        <td>Vmph</td>
+                    </tr>
+                </table>
+            </div>
+
+            <!-- Seismic Data -->
+            <div class="table-section">
+                <h3>Seismic Data</h3>
+                <table>
+                    <tr>
+                        <th>Parameter</th>
+                        <th>Value</th>
+                    </tr>
+                    {% for param in ['SS', 'S1', 'Fa', 'Fv', 'SMS', 'SM1', 'SDS', 'SD1', 'TL', 'PGA', 'PGAM', 'FPGA', 'Ie', 'Cv', 'seismic_design_category', 'no_seismic_spectrum', 'spectrum_note'] %}
+                    <tr>
+                        <td>
+                            {% if param == 'seismic_design_category' %}
+                                Seismic Design Category
+                            {% elif param == 'no_seismic_spectrum' %}
+                                No Seismic Spectrum
+                            {% elif param == 'spectrum_note' %}
+                                Spectrum Note
+                            {% else %}
+                                {{ param }}
+                            {% endif %}
+                        </td>
+                        <td>{{ getattr(summary_data.seismic_data, param, 'N/A') }}</td>
+                    </tr>
+                    {% endfor %}
+                </table>
+            </div>
+
+            <!-- Ice Data -->
+            <div class="table-section">
+                <h3>Ice Data</h3>
+                <table>
+                    <tr>
+                        <th>Parameter</th>
+                        <th>Value</th>
+                        <th>Unit</th>
+                    </tr>
+                    <tr>
+                        <td>Thickness</td>
+                        <td>{{ summary_data.ice_data.thickness }}</td>
+                        <td>in.</td>
+                    </tr>
+                    <tr>
+                        <td>Concurrent Temperature</td>
+                        <td>{{ summary_data.ice_data.concurrent_temperature }}</td>
+                        <td>°F</td>
+                    </tr>
+                    <tr>
+                        <td>Gust Speed</td>
+                        <td>{{ summary_data.ice_data.gust_speed }}</td>
+                        <td>mph</td>
+                    </tr>
+                </table>
+            </div>
+
+            <!-- Snow Data -->
+            <div class="table-section">
+                <h3>Snow Data</h3>
+                <table>
+                    <tr>
+                        <th>Parameter</th>
+                        <th>Value</th>
+                        <th>Unit</th>
+                    </tr>
+                    <tr>
+                        <td>Ground Snow Load, pg</td>
+                        <td>{{ summary_data.snow_data.ground_snow_load_pg }}</td>
+                        <td>lb/ft²</td>
+                    </tr>
+                    <tr>
+                        <td>Ground Snow Load, pg (2400.0 ft)</td>
+                        <td>{{ summary_data.snow_data.ground_snow_load_pg_elevation }}</td>
+                        <td>lb/ft²</td>
+                    </tr>
+                    <tr>
+                        <td>Mapped Elevation</td>
+                        <td>{{ summary_data.snow_data.mapped_elevation }}</td>
+                        <td>ft</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="button-group">
+            <form method="POST" action="{{ url_for('save_summary_report') }}">
+                <button type="submit" class="btn save-btn">Save Report</button>
+            </form>
+            <button onclick="window.location.href='{{ url_for('fetch_project_number_get') }}'" class="btn search-btn">Search Again</button>
+            <button onclick="window.location.href='{{ url_for('home') }}'" class="btn home-btn">Home</button>
+        </div>
+
+        <!-- Loading indicator -->
+        <div id="loading-indicator" style="display:none;">
+            <p>Saving report, please wait...</p>
+        </div>
+    </div>
+
+    <script>
+        document.querySelector('.save-btn').addEventListener('click', function() {
+            document.getElementById('loading-indicator').style.display = 'block';
+        });
+    </script>
+</body>
+</html>
