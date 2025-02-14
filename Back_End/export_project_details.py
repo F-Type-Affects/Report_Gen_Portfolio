@@ -6,6 +6,8 @@ import logging
 from .config import get_config
 from openpyxl.utils import get_column_letter
 from openpyxl.styles import Font, PatternFill
+from .models import ASCESummaryData
+from typing import Tuple
 
 config = get_config()
 
@@ -123,7 +125,6 @@ def insert_ahj_data(sheet, ahj_info, amendment_data):
     
     logger.debug("AHJ and amendment data inserted successfully.")
 
-
 def save_workbook(workbook, project_code):
     """
     Saves the workbook to the appropriate directory based on project code.
@@ -148,6 +149,9 @@ def save_workbook(workbook, project_code):
     if not os.path.exists(ahj_report_dir):
         os.makedirs(ahj_report_dir)  # Create the directory if it doesn't exist
         logger.debug(f"Created directory: {ahj_report_dir}")
+
+    # Auto-adjust column widths before saving
+    auto_adjust_column_width(workbook.active)
 
     # Create the filename with timestamp
     filename = f"AHJ_Report.xlsx"
@@ -237,3 +241,211 @@ def find_project_directory(project_code):
     except Exception as e:
         logger.error(f"Error accessing project directory: {e}")
         return None
+    
+def find_report_workbook(project_code):
+    """
+    Finds the AHJ Report workbook for a given project code.
+    
+    Args:
+        project_code (str): Project code in formats:
+            General: "yy-xxxx" or "xxxx-yy"
+            Pool: "yy-Pxxx"
+            
+    Returns:
+        tuple: (bool, str) where:
+            - bool indicates if workbook was found
+            - str contains either the full path to the workbook or an error message
+    """
+    logger.info(f"Searching for AHJ Report workbook for project: {project_code}")
+    
+    try:
+        # Use existing function to find the project directory
+        project_dir = find_project_directory(project_code)
+        
+        if not project_dir:
+            logger.error(f"Project directory not found for project code: {project_code}")
+            return False, "Project directory not found"
+
+        # Look for AHJ_REPORT subdirectory
+        ahj_report_dir = os.path.join(project_dir, "AHJ_REPORT")
+        if not os.path.exists(ahj_report_dir):
+            logger.error(f"AHJ_REPORT directory not found in project folder: {project_dir}")
+            return False, "AHJ_REPORT directory not found"
+
+        # Look for the workbook file
+        workbook_path = os.path.join(ahj_report_dir, "AHJ_Report.xlsx")
+        if not os.path.exists(workbook_path):
+            logger.error(f"AHJ_Report.xlsx not found in: {ahj_report_dir}")
+            return False, "AHJ_Report.xlsx not found"
+
+        logger.info(f"AHJ Report workbook found at: {workbook_path}")
+        return True, workbook_path
+
+    except Exception as e:
+        error_msg = f"Error while searching for AHJ Report workbook: {str(e)}"
+        logger.error(error_msg)
+        return False, error_msg
+
+
+def insert_summary_sheet(workbook: openpyxl.Workbook, summary_data: ASCESummaryData) -> None:
+    """
+    Inserts ASCE summary data as a new worksheet in an existing workbook.
+    
+    Args:
+        workbook: Existing openpyxl Workbook object
+        summary_data: ASCESummaryData object containing the scraped data
+    """
+    logger.info("Creating ASCE Summary worksheet")
+    
+    # Create new worksheet
+    sheet = workbook.create_sheet("ASCE Summary")
+    
+    # Set up headers with styling
+    headers = ['Section', 'Parameter', 'Value', 'Unit']
+    for col, header in enumerate(headers, 1):
+        cell = sheet.cell(row=1, column=col)
+        cell.value = header
+        cell.font = Font(bold=True)
+        cell.fill = PatternFill(start_color="D9D9D9", end_color="D9D9D9", fill_type="solid")
+    
+    current_row = 2
+    
+    # Wind Section
+    sheet.cell(row=current_row, column=1, value="Wind")
+    current_row += 1
+    
+    wind_params = [
+        ("Wind Speed", summary_data.wind_data.wind_speed, "Vmph"),
+        ("10-year MRI", summary_data.wind_data.ten_year_mri, "Vmph"),
+        ("25-year MRI", summary_data.wind_data.twenty_five_year_mri, "Vmph"),
+        ("50-year MRI", summary_data.wind_data.fifty_year_mri, "Vmph"),
+        ("100-year MRI", summary_data.wind_data.hundred_year_mri, "Vmph")
+    ]
+    
+    for param, value, unit in wind_params:
+        sheet.cell(row=current_row, column=2, value=param)
+        sheet.cell(row=current_row, column=3, value=value)
+        sheet.cell(row=current_row, column=4, value=unit)
+        current_row += 1
+    
+    # Seismic Section
+    current_row += 1
+    sheet.cell(row=current_row, column=1, value="Seismic")
+    current_row += 1
+    
+    seismic_params = [
+        ("SS", summary_data.seismic_data.SS, ""),
+        ("S1", summary_data.seismic_data.S1, ""),
+        ("Fa", summary_data.seismic_data.Fa, ""),
+        ("Fv", summary_data.seismic_data.Fv, ""),
+        ("SMS", summary_data.seismic_data.SMS, ""),
+        ("SM1", summary_data.seismic_data.SM1, ""),
+        ("SDS", summary_data.seismic_data.SDS, ""),
+        ("SD1", summary_data.seismic_data.SD1, ""),
+        ("TL", summary_data.seismic_data.TL, ""),
+        ("PGA", summary_data.seismic_data.PGA, ""),
+        ("PGAM", summary_data.seismic_data.PGAM, ""),
+        ("FPGA", summary_data.seismic_data.FPGA, ""),
+        ("Ie", summary_data.seismic_data.Ie, ""),
+        ("Cv", summary_data.seismic_data.Cv, ""),
+        ("Seismic Design Category", summary_data.seismic_data.seismic_design_category, ""),
+        ("No Seismic Spectrum", summary_data.seismic_data.no_seismic_spectrum, ""),
+        ("Spectrum Note", summary_data.seismic_data.spectrum_note, "")
+    ]
+    
+    for param, value, unit in seismic_params:
+        sheet.cell(row=current_row, column=2, value=param)
+        sheet.cell(row=current_row, column=3, value=value if value is not None else "N/A")
+        sheet.cell(row=current_row, column=4, value=unit)
+        current_row += 1
+    
+    # Ice Section
+    current_row += 1
+    sheet.cell(row=current_row, column=1, value="Ice")
+    current_row += 1
+    
+    ice_params = [
+        ("Thickness", summary_data.ice_data.thickness, "in."),
+        ("Concurrent Temperature", summary_data.ice_data.concurrent_temperature, "F"),
+        ("Gust Speed", summary_data.ice_data.gust_speed, "mph")
+    ]
+    
+    for param, value, unit in ice_params:
+        sheet.cell(row=current_row, column=2, value=param)
+        sheet.cell(row=current_row, column=3, value=value)
+        sheet.cell(row=current_row, column=4, value=unit)
+        current_row += 1
+    
+    # Snow Section
+    current_row += 1
+    sheet.cell(row=current_row, column=1, value="Snow")
+    current_row += 1
+    
+    snow_params = [
+        ("Ground Snow Load, pg", summary_data.snow_data.ground_snow_load_pg, "lb/ft2"),
+        ("Ground Snow Load, pg (2400.0 ft)", summary_data.snow_data.ground_snow_load_pg_elevation, "lb/ft2"),
+        ("Mapped Elevation", summary_data.snow_data.mapped_elevation, "ft")
+    ]
+    
+    for param, value, unit in snow_params:
+        sheet.cell(row=current_row, column=2, value=param)
+        sheet.cell(row=current_row, column=3, value=value)
+        sheet.cell(row=current_row, column=4, value=unit)
+        current_row += 1
+    
+    # Adjust column widths
+    auto_adjust_column_width(sheet)
+    
+    logger.info("ASCE Summary worksheet created successfully")
+
+def update_workbook_with_summary(project_code: str, summary_data: ASCESummaryData) -> Tuple[bool, str]:
+    """
+    Updates the AHJ Report workbook with ASCE summary data.
+    
+    Args:
+        project_code: Project code to locate the workbook
+        summary_data: ASCESummaryData object containing the scraped data
+        
+    Returns:
+        Tuple[bool, str]: Success status and message/path
+    """
+    logger.info(f"Attempting to update workbook with ASCE summary for project: {project_code}")
+    
+    try:
+        # First find the workbook
+        success, result = find_report_workbook(project_code)
+        if not success:
+            logger.error(f"Could not find workbook: {result}")
+            return False, result
+            
+        workbook_path = result
+        
+        # Load the workbook
+        try:
+            workbook = openpyxl.load_workbook(workbook_path)
+        except Exception as e:
+            error_msg = f"Error loading workbook: {str(e)}"
+            logger.error(error_msg)
+            return False, error_msg
+            
+        # Remove existing ASCE Summary sheet if it exists
+        if "ASCE Summary" in workbook.sheetnames:
+            del workbook["ASCE Summary"]
+            
+        # Insert new summary sheet
+        insert_summary_sheet(workbook, summary_data)
+        
+        # Save the workbook
+        try:
+            workbook.save(workbook_path)
+            logger.info(f"Workbook updated successfully at: {workbook_path}")
+            return True, workbook_path
+        except Exception as e:
+            error_msg = f"Error saving workbook: {str(e)}"
+            logger.error(error_msg)
+            return False, error_msg
+            
+    except Exception as e:
+        error_msg = f"Unexpected error updating workbook: {str(e)}"
+        logger.error(error_msg)
+        return False, error_msg

@@ -14,12 +14,13 @@ from .auth import get_authorization_url, exchange_code_for_token, decode_id_toke
 from .database import setup_database, get_all_emails, get_user_details_by_email
 from .token_manager import save_token_data, get_valid_access_token
 from .project_manager import get_project_by_code, get_client_by_id
-from .models import Project, Client
+from .models import Project, Client, ASCESummaryData, WindData, SeismicData, IceData, SnowData
 from .config import get_config
 from .ahj_manager import search_ahj_registry, perform_bing_search
 from .create_project import get_clients_by_name, get_employees, fetch_manager_id, send_create_project_request
-from .export_project_details import create_workbook, insert_project_data, insert_client_data, insert_ahj_data, save_workbook
+from .export_project_details import create_workbook, insert_project_data, insert_client_data, insert_ahj_data, save_workbook, update_workbook_with_summary, find_report_workbook
 from .cover_letter import generate_cover_letter
+from .asce_hazard_summary import ASCEScraper
 
 config = get_config()
 
@@ -499,6 +500,250 @@ def generate_cover_letter_confirmed():
         return redirect(url_for('home'))
 
 """End of Cover Letter specefic app route
+"""
+
+"""
+App routes to scrape ASCE hazard tool for summary table and Full Report
+"""
+@app.route('/generate_asce_summary', methods=['GET', 'POST'])
+def generate_asce_summary():
+    """
+    App route to generate ASCE Hazard Tool summary and add it to the AHJ Report.
+    Handles both creating new AHJ Reports if needed and updating existing ones.
+    Handle both displaying the options form and processing the scraping request.
+    """
+    if request.method == 'GET':
+        # Get required session data
+        selected_email = session.get('selected_email')
+        if not selected_email:
+            flash('No email selected. Please select an email first.', 'error')
+            return redirect(url_for('select_user_email_get'))
+
+        project_number = request.args.get('project_number')
+        if not project_number:
+            flash('Please enter a project number.', 'error')
+            return redirect(url_for('fetch_project_number_get'))
+            
+        # Get project data
+        project_data = get_project_by_code(project_number, selected_email)
+        if not project_data:
+            flash('Project not found. Please check the Project ID and try again.', 'error')
+            return redirect(url_for('fetch_project_number_get'))
+        
+        # Create Project instance
+        project = Project.from_dict(project_data[0])
+        
+        # Validate project address
+        if not all([project.street1, project.city, project.state, project.zip_code]):
+            flash('Project address is incomplete. Please verify the project has a complete address.', 'error')
+            return redirect(url_for('fetch_project_number_get'))
+
+        # Store data in session
+        session['project_data'] = {
+            'code': project_number,
+            'name': project.name,
+            'purchase_order_number': project.purchase_order_number,
+            'billing_contact': project.billing_contact,
+            'street1': project.street1,
+            'street2': project.street2,
+            'city': project.city,
+            'state': project.state,
+            'zip_code': project.zip_code
+        }
+
+        # Display the options form with project data
+        return render_template('select_asce_options.html',
+                             project_data=session['project_data'])
+    
+    try:
+        # Get required session data
+        selected_email = session.get('selected_email')
+        if not selected_email:
+            flash('No email selected. Please select an email first.', 'error')
+            return redirect(url_for('select_user_email_get'))
+        
+        # Get project number from session instead of form
+        project_data = session.get('project_data')
+        if not project_data or not project_data.get('code'):
+            flash('Please enter a project number.', 'error')
+            return redirect(url_for('fetch_project_number_get'))
+            
+        project_number = project_data['code']  # Get project number from stored project data
+
+        # Check if AHJ Report exists
+        workbook_exists, result = find_report_workbook(project_number)
+        
+        # If workbook doesn't exist, we need to create it first
+        if not workbook_exists:
+            logger.info(f"AHJ Report not found for project {project_number}. Creating new report.")
+            
+            # Get project and client data
+            project_data = get_project_by_code(project_number, selected_email)
+            if not project_data:
+                flash('Project not found. Please check the Project ID and try again.', 'error')
+                return redirect(url_for('fetch_project_number_get'))
+            
+            # Create Project instance
+            project = Project.from_dict(project_data[0])
+            
+            # Validate project address
+            if not all([project.street1, project.city, project.state, project.zip_code]):
+                flash('Project address is incomplete. Please verify the project has a complete address.', 'error')
+                return redirect(url_for('fetch_project_number_get'))
+
+            # Get client data
+            client_data = get_client_by_id(project.client_id, selected_email)
+            client = Client.from_dict(client_data[0]) if client_data else None
+
+            # Store data in session
+            session['project_data'] = {
+                'code': project_number,
+                'name': project.name,
+                'purchase_order_number': project.purchase_order_number,
+                'billing_contact': project.billing_contact,
+                'street1': project.street1,
+                'street2': project.street2,
+                'city': project.city,
+                'state': project.state,
+                'zip_code': project.zip_code
+            }
+            
+            session['client_data'] = {
+                'client_name': client.name if client else 'N/A',
+                'client_email': client.email if client else 'N/A',
+                'client_phone': client.phone if client else 'N/A',
+                'street1': client.street1 if client else '',
+                'street2': client.street2 if client else '',
+                'city': client.city if client else '',
+                'state': client.state if client else '',
+                'zip_code': client.zip_code if client else ''
+            }
+
+            # Get AHJ data
+            project_address = f"{project.street1}, {project.city}, {project.state}, {project.zip_code}"
+            ahj_data = search_ahj_registry(project_address)
+            
+            # Handle amendments
+            amendments = {"pdf_links": [], "web_links": []}
+            if ahj_data and len(ahj_data) > 0:
+                try:
+                    ahj_name = ahj_data[0].get('AHJ Name')
+                    if ahj_name:
+                        query = f"{ahj_name}, {project.state} building code amendments filetype:pdf"
+                        amendments["pdf_links"], amendments["web_links"] = perform_bing_search(query, retries=5)
+                except Exception as e:
+                    logger.error(f"Error searching amendments: {str(e)}")
+                    flash('Amendment search failed. Continuing without amendments.', 'warning')
+
+            # Store AHJ data
+            session['stored_ahj_data'] = ahj_data or []
+            session['stored_amendment_pdf_links'] = amendments["pdf_links"]
+            session['stored_amendment_web_links'] = amendments["web_links"]
+
+            # Create and save initial workbook
+            workbook = create_workbook()
+            insert_project_data(workbook.active, session['project_data'])
+            insert_client_data(workbook.active, session['client_data'])
+            insert_ahj_data(workbook.active, ahj_data or [], amendments)
+            
+            if not save_workbook(workbook, project_number):
+                flash('Failed to create AHJ Report. Please try again.', 'error')
+                return redirect(url_for('home'))
+        
+        # either work book exist or has been created
+        
+        # Initialize scraper
+        scraper = ASCEScraper()
+        
+        # Get project address from session
+        project_data = session.get('project_data')
+        if not project_data:
+            flash('Project data not found. Please try again.', 'error')
+            return redirect(url_for('home'))
+            
+        address = f"{project_data['street1']}, {project_data['city']}, {project_data['state']}, {project_data['zip_code']}"
+        
+        # Get form data
+        standard_version = request.form.get('standard_version')
+        risk_category = request.form.get('risk_category')
+        soil_class = request.form.get('soil_class')
+
+        if not all([standard_version, risk_category, soil_class]):
+            flash('Please select all required ASCE options.', 'error')
+            return redirect(url_for('generate_asce_summary'))
+        
+        # Execute scraping
+        success, error_msg, summary_data = scraper.run_scraping_process(
+            address=address,
+            standard_version=standard_version,
+            risk_category=risk_category,
+            soil_class=soil_class
+        )
+        
+        if not success:
+            flash(f'Failed to scrape ASCE data: {error_msg}', 'error')
+            return redirect(url_for('home'))
+        
+        # Store the summary data in session for the template
+        session['summary_data'] = {
+            'wind_data': {
+                'wind_speed': summary_data.wind_data.wind_speed,
+                'ten_year_mri': summary_data.wind_data.ten_year_mri,
+                'twenty_five_year_mri': summary_data.wind_data.twenty_five_year_mri,
+                'fifty_year_mri': summary_data.wind_data.fifty_year_mri,
+                'hundred_year_mri': summary_data.wind_data.hundred_year_mri,
+                'unit': summary_data.wind_data.unit
+            },
+            'seismic_data': vars(summary_data.seismic_data),
+            'ice_data': vars(summary_data.ice_data),
+            'snow_data': vars(summary_data.snow_data)
+        }
+        
+        # Render the display template
+        return render_template('display_summary_details.html',
+                             project_data=session.get('project_data'),
+                             summary_data=summary_data,
+                             getattr=getattr)
+        
+    except Exception as e:
+        logger.error(f"Error in generate_asce_summary: {str(e)}")
+        flash('An unexpected error occurred. Please try again.', 'error')
+        return redirect(url_for('home'))
+
+@app.route('/save_summary_report', methods=['POST'])
+def save_summary_report():
+    try:
+        project_number = session.get('project_data', {}).get('code')
+        summary_dict = session.get('summary_data')
+        
+        if not project_number or not summary_dict:
+            flash('Missing required data. Please try again.', 'error')
+            return redirect(url_for('home'))
+            
+        # Reconstruct the class instances
+        summary_data = ASCESummaryData(
+            wind_data=WindData(**summary_dict['wind_data']),
+            seismic_data=SeismicData(**summary_dict['seismic_data']),
+            ice_data=IceData(**summary_dict['ice_data']),
+            snow_data=SnowData(**summary_dict['snow_data'])
+        )
+            
+        success, result = update_workbook_with_summary(project_number, summary_data)
+        
+        if success:
+            flash('ASCE Summary data successfully saved to report.', 'success')
+        else:
+            flash(f'Failed to save summary data: {result}', 'error')
+            
+        return redirect(url_for('home'))
+        
+    except Exception as e:
+        logger.error(f"Error saving summary report: {str(e)}")
+        flash('An unexpected error occurred while saving the report.', 'error')
+        return redirect(url_for('home'))
+
+"""
+End of ASCE web scraping app routes
 """
 
 """Helper functions to get specefic user data for calls to endpoints"""

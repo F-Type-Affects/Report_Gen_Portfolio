@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Select ASCE Options</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/select_asce_options.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/flash_message.css') }}">
+</head>
+<body>
+    {% include 'flash_message.html' %}
+    <div class="container">
+        <h2>Select ASCE Hazard Tool Options</h2>
+
+        <!-- Project Info Display -->
+        <div class="project-info">
+            <p><strong>Project ID:</strong> {{ project_data.code }}</p>
+            <p><strong>Project Address:</strong> 
+                {{ project_data.street1 }}, 
+                {% if project_data.street2 %}
+                    {{ project_data.street2 }},
+                {% endif %}
+                {{ project_data.city }}, {{ project_data.state }}, {{ project_data.zip_code }}
+            </p>
+        </div>
+
+        <form id="asceForm" method="POST" action="{{ url_for('generate_asce_summary') }}">
+            <!-- Standards Version Selector -->
+            <div class="form-group">
+                <label for="standards-selector">ASCE Standard Version:</label>
+                <select id="standards-selector" name="standard_version" class="form-select" required>
+                    <option value="" disabled selected>Select Standard Version</option>
+                    <option value="7-10">ASCE/SEI 7-10</option>
+                    <option value="7-16">ASCE/SEI 7-16</option>
+                    <option value="7-22">ASCE/SEI 7-22</option>
+                    <option value="41-17">ASCE/SEI 41-17</option>
+                    <option value="41-23">ASCE/SEI 41-23</option>
+                </select>
+            </div>
+
+            <!-- Risk Category Selector -->
+            <div class="form-group">
+                <label for="risk-category">Risk Category:</label>
+                <select id="risk-category" name="risk_category" class="form-select" required>
+                    <option value="" disabled selected>Select Risk Category</option>
+                    <option value="1">I</option>
+                    <option value="2">II</option>
+                    <option value="3">III</option>
+                    <option value="4">IV</option>
+                </select>
+            </div>
+
+            <!-- Site Soil Class Selector -->
+            <div class="form-group">
+                <label for="soil-class">Site Soil Class:</label>
+                <select id="soil-class" name="soil_class" class="form-select" required>
+                    <option value="" disabled selected>Select Site Soil Class</option>
+                    <!-- Options will be populated by JavaScript -->
+                </select>
+            </div>
+
+            <!-- Button Group -->
+            <div class="button-group">
+                <button type="submit" class="btn submit-btn">Generate Summary</button>
+                <button type="button" onclick="window.location.href='{{ url_for('fetch_project_number_get') }}'" class="btn back-btn">Back</button>
+            </div>
+
+            <!-- Loading indicator -->
+            <div id="loading-indicator" style="display:none;">
+                <p>Scraping ASCE data, please wait...</p>
+                <div class="spinner"></div>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        // Soil class options for each standard version
+        const soilClassOptions = {
+            '7-10': [
+                { value: '0', text: 'A - Hard Rock' },
+                { value: '1', text: 'B - Rock' },
+                { value: '2', text: 'C - Very Dense Soil and Soft Rock' },
+                { value: '3', text: 'D - Stiff Soil' },
+                { value: '4', text: 'E - Soft Clay Soil' },
+                { value: '5', text: 'F - Site Response Analysis' }
+            ],
+            '7-16': [
+                { value: '0', text: 'A - Hard Rock' },
+                { value: '1', text: 'B - Rock' },
+                { value: '2', text: 'B - Estimated (see Section 11.4.3)' },
+                { value: '3', text: 'C - Very Dense Soil and Soft Rock' },
+                { value: '4', text: 'D - Stiff Soil' },
+                { value: '5', text: 'D - Default (see Section 11.4.3)' },
+                { value: '6', text: 'E - Soft Clay Soil' },
+                { value: '7', text: 'F - Site Response Analysis' }
+            ],
+            '7-22': [
+                { value: '0', text: 'Default' },
+                { value: '1', text: 'A - Hard Rock' },
+                { value: '2', text: 'B - Rock' },
+                { value: '3', text: 'BC' },
+                { value: '4', text: 'C - Very Dense Soil and Soft Rock' },
+                { value: '5', text: 'CD' },
+                { value: '6', text: 'D - Stiff Soil' },
+                { value: '7', text: 'DE' },
+                { value: '8', text: 'E - Soft Clay Soil' }
+            ]
+        };
+
+        // Update soil class options when standard version changes
+        document.getElementById('standards-selector').addEventListener('change', function() {
+            const soilClassSelect = document.getElementById('soil-class');
+            soilClassSelect.innerHTML = '<option value="" disabled selected>Select Site Soil Class</option>';
+            
+            const options = soilClassOptions[this.value] || [];
+            options.forEach(option => {
+                const optElement = document.createElement('option');
+                optElement.value = option.value;
+                optElement.textContent = option.text;
+                soilClassSelect.appendChild(optElement);
+            });
+        });
+
+        // Show loading indicator on form submit
+        document.getElementById('asceForm').addEventListener('submit', function() {
+            document.getElementById('loading-indicator').style.display = 'block';
+        });
+    </script>
+</body>
+</html>
