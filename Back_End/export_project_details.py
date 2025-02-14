@@ -13,8 +13,9 @@ config = get_config()
 
 logger = logging.getLogger(__name__)
 
-# Base directory for Jobs
+# Base directory for Jobs & Pools
 BASE_DIR = config.REPORT_DIRECTORY
+POOL_DIR = config.POOL_DIRECTORY
 
 def create_workbook():
     # Create a new Excel workbook and active worksheet
@@ -193,16 +194,15 @@ def find_project_directory(project_code):
             code = project_code[4:].lstrip('0')  # Remove leading zeros
             year_full = "20" + year
             
-            # Updated pool paths to use root Pools directory
-            pools_dir = os.path.join('J:', 'Pools')
+            # Use POOL_DIR for pool projects
             year_folder = f"Pools-{year_full}"
-            year_directory = os.path.join(pools_dir, year_folder)
+            year_directory = os.path.join(POOL_DIR, year_folder)
             
-            # Updated pool project folder prefix format
+            # Pool project folder prefix format
             project_folder_prefix = f"{code}-{year}P"
             
         else:
-            # Existing general project logic remains unchanged
+            # General project logic
             if len(project_code) == 7 and project_code[2] == '-':
                 year, code = project_code[:2], project_code[3:]
                 year_full = "20" + year
@@ -220,15 +220,16 @@ def find_project_directory(project_code):
             else:
                 code_formatted = code
 
-            base_dir = config.COVER_LETTER_OUTPUT_DIR
+            # Use BASE_DIR for general projects
             year_folder = f"Jobs {year_full}"
-            year_directory = os.path.join(base_dir, year_folder)
+            year_directory = os.path.join(BASE_DIR, year_folder)
             project_folder_prefix = f"{code_formatted}-{year}"
 
         if not os.path.exists(year_directory):
             logger.warning(f"Year folder not found: {year_directory}")
             return None
 
+        # Search for matching project directory
         for dir_name in os.listdir(year_directory):
             if dir_name.startswith(project_folder_prefix):
                 project_directory = os.path.join(year_directory, dir_name)
