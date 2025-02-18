@@ -15,4 +15,4 @@ venv/
 Thumbs.db
 
 # Other files to ignore
-*.log
+*.logBack_End/token_storage.db
