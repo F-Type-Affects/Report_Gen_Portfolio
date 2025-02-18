@@ -202,12 +202,25 @@ class ASCEScraper:
     def initialize_driver(self) -> bool:
         """Initialize and configure the Chrome WebDriver"""
         try:
+            import tempfile
+            import shutil
+            
+            # create unique temp directory for gunicorn workers to use
+            self.temp_dir = tempfile.mkdtemp()
+            
+            
             options = webdriver.ChromeOptions()
             options.page_load_strategy = 'normal'
+            options.add_argument('--no-sandbox')
+            options.add_argument('--headless')
+            options.add_argument(f'--user-data-dir={self.temp_dir}')
+            
             self.driver = webdriver.Chrome(options=options)
             self.driver.maximize_window()
             return True
         except Exception as e:
+            if hasattr(self, 'temp_dir'):
+                shutil.rmtree(self.temp_dir,ignore_errors=True)
             self.logger.error(f"Failed to initialize driver: {str(e)}")
             return False
 
@@ -341,6 +354,20 @@ class ASCEScraper:
         except Exception as e:
             self.logger.error(f"Error saving to Excel: {str(e)}")
             return None
+
+    def cleanup(self):
+        """Cleanup resources"""
+        try:
+            if self.driver:
+                self.driver.quit()
+                self.driver = None
+                
+            if hasattr(self, 'temp_dir'):
+                import shutil
+                shutil.rmtree(self.temp_dir, ignore_errors=True)
+        except Exception as e:
+           self.logger.error(f"Error during cleanup: {str(e)}") 
+
 
     def run_scraping_process(self, address: str, standard_version: str, risk_category: str, soil_class: str) -> Tuple[bool, Optional[str], Optional[Dict]]:
         """
@@ -479,33 +506,4 @@ class ASCEScraper:
             return False, error_msg, None
         
         finally:
-            if self.driver:
-                self.driver.quit()
-                self.driver = None
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    def cleanup(self):
-        """Cleanup resources"""
-        if self.driver:
-            self.driver.quit()
+            self.cleanup()

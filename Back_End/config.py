@@ -55,8 +55,10 @@ class DevelopmentConfig(Config):
     TEMPLATE_FOLDER = r"C:\Users\fstranathan\Desktop\SML_Reports_Test\Front_End_Web\templates"
     DATABASE_PATH = os.getenv('DATABASE_PATH')
     REPORT_DIRECTORY = os.getenv('REPORT_DIRECTORY')
+    POOL_DIRECTORY = os.getenv('POOL_DIRECTORY')
     COVER_LETTER_TEMPLATE_PATH = os.getenv('COVER_LETTER_TEMPLATE_PATH')
     COVER_LETTER_OUTPUT_DIR = os.getenv('COVER_LETTER_OUTPUT_DIR')
+    COVER_LETTER_POOLS_OUTPUT = os.getenv('COVER_LETTER_POOLS_OUTPUT')
     # logging settings
     LOG_LEVEL = logging.DEBUG
     DEBUG = True
