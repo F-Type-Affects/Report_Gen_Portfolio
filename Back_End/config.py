@@ -63,8 +63,13 @@ class DevelopmentConfig(Config):
     
 # Production configuration
 class ProductionConfig(Config):
+<<<<<<< HEAD
     DEBUG = False
     LOG_LEVEL = logging.WARNING
+=======
+    DEBUG = True
+    LOG_LEVEL = logging.DEBUG
+>>>>>>> develop
     REDIS_HOST = '127.0.0.1'
     STATIC_FOLDER = "/home/frank/SML_Reports_Test/SML_Report_Gen/Front_End_Web/static"
     TEMPLATE_FOLDER = "/home/frank/SML_Reports_Test/SML_Report_Gen/Front_End_Web/templates"
@@ -76,8 +81,13 @@ class ProductionConfig(Config):
     COVER_LETTER_POOLS_OUTPUT = os.getenv('COVER_LETTER_POOLS_OUTPUT')
     
     # logging settings
+<<<<<<< HEAD
     LOG_LEVEL = min(logging.WARNING, logging.INFO)
     DEBUG = False
+=======
+    LOG_LEVEL = logging.DEBUG
+    DEBUG = True
+>>>>>>> develop
     
 # Function to get the correct configuration
 def get_config():
