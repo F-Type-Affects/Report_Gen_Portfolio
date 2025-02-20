@@ -1,0 +1,12 @@
+[2024-12-13 12:26:50 -0700] [2604137] [INFO] Starting gunicorn 23.0.0
+[2024-12-13 12:26:50 -0700] [2604137] [ERROR] Connection in use: ('127.0.0.1', 8000)
+[2024-12-13 12:26:50 -0700] [2604137] [ERROR] connection to ('127.0.0.1', 8000) failed: [Errno 98] Address already in use
+[2024-12-13 12:26:51 -0700] [2604137] [ERROR] Connection in use: ('127.0.0.1', 8000)
+[2024-12-13 12:26:51 -0700] [2604137] [ERROR] connection to ('127.0.0.1', 8000) failed: [Errno 98] Address already in use
+[2024-12-13 12:26:52 -0700] [2604137] [ERROR] Connection in use: ('127.0.0.1', 8000)
+[2024-12-13 12:26:52 -0700] [2604137] [ERROR] connection to ('127.0.0.1', 8000) failed: [Errno 98] Address already in use
+[2024-12-13 12:26:53 -0700] [2604137] [ERROR] Connection in use: ('127.0.0.1', 8000)
+[2024-12-13 12:26:53 -0700] [2604137] [ERROR] connection to ('127.0.0.1', 8000) failed: [Errno 98] Address already in use
+[2024-12-13 12:26:54 -0700] [2604137] [ERROR] Connection in use: ('127.0.0.1', 8000)
+[2024-12-13 12:26:54 -0700] [2604137] [ERROR] connection to ('127.0.0.1', 8000) failed: [Errno 98] Address already in use
+[2024-12-13 12:26:55 -0700] [2604137] [ERROR] Can't connect to ('127.0.0.1', 8000)

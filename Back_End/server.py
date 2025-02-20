@@ -569,10 +569,23 @@ def generate_asce_summary():
         project_number = project_data['code']  # Get project number from stored project data
 
         # Check if AHJ Report exists
-        workbook_exists, result = find_report_workbook(project_number)
+        #workbook_exists, result = find_report_workbook(project_number)
+        find_result = find_report_workbook(project_number)
+        logger.info(f"Raw result from find_report_workbook: {find_result}")
+        logger.info(f"Result type: {type(find_result)}")
+        
+        # Safely unpack the result
+        if isinstance(find_result, tuple) and len(find_result) == 2:
+            workbook_exists, result = find_result
+            logger.info(f"Unpacked values: workbook_exists={workbook_exists} ({type(workbook_exists)}), result={result}")
+        else:
+            logger.error(f"Unexpected return format from find_report_workbook: {find_result}")
+            workbook_exists = False
+            result = "Unexpected function return format"
+
         
         # If workbook doesn't exist, we need to create it first
-        if not workbook_exists:
+        if workbook_exists == False:
             logger.info(f"AHJ Report not found for project {project_number}. Creating new report.")
             
             # Get project and client data
@@ -643,11 +656,23 @@ def generate_asce_summary():
             insert_project_data(workbook.active, session['project_data'])
             insert_client_data(workbook.active, session['client_data'])
             insert_ahj_data(workbook.active, ahj_data or [], amendments)
-            
-            if not save_workbook(workbook, project_number):
-                flash('Failed to create AHJ Report. Please try again.', 'error')
+
+            # Save the workbook and get the path
+            workbook_path = save_workbook(workbook, project_number)
+            if not workbook_path:
+                flash('Failed to create AHJ Report. Please verify directory permissions.', 'error')
+                logger.error(f"Failed to save workbook for project {project_number}")
                 return redirect(url_for('home'))
-        
+
+            # Check that the workbook exists
+            if not os.path.exists(workbook_path):
+                flash('Workbook was created but file not found. Please check server permissions.', 'error')
+                logger.error(f"Workbook file not found after creation: {workbook_path}")
+                return redirect(url_for('home'))
+
+            logger.info(f"Successfully created workbook at: {workbook_path}")
+        else:
+            logger.info(f"Workbook exists check failed. Value: {workbook_exists}, Result: {result}")
         # either work book exist or has been created
         
         # Initialize scraper
