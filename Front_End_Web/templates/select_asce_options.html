@@ -24,7 +24,8 @@
             </p>
         </div>
 
-        <form id="asceForm" method="POST" action="{{ url_for('generate_asce_summary') }}">
+        <!-- Dynamically set form action based on source route -->
+        <form id="asceForm" method="POST" action="{{ request.path }}">
             <!-- Standards Version Selector -->
             <div class="form-group">
                 <label for="standards-selector">ASCE Standard Version:</label>
@@ -61,13 +62,27 @@
 
             <!-- Button Group -->
             <div class="button-group">
+                <!-- Show appropriate buttons based on the current route -->
+                {% if request.path == url_for('generate_asce_summary') %}
                 <button type="submit" class="btn submit-btn">Generate Summary</button>
+                {% elif request.path == url_for('generate_asce_full_report') %}
+                <button type="submit" class="btn submit-btn full-report-btn">Generate Full Report</button>
+                {% else %}
+                <button type="submit" class="btn submit-btn">Generate Summary</button>
+                <button type="submit" formaction="{{ url_for('generate_asce_full_report') }}" class="btn submit-btn full-report-btn">Generate Full Report</button>
+                {% endif %}
                 <button type="button" onclick="window.location.href='{{ url_for('fetch_project_number_get') }}'" class="btn back-btn">Back</button>
             </div>
 
             <!-- Loading indicator -->
             <div id="loading-indicator" style="display:none;">
-                <p>Scraping ASCE data, please wait...</p>
+                <p id="loading-text">
+                    {% if request.path == url_for('generate_asce_full_report') %}
+                    Downloading full report, please wait...
+                    {% else %}
+                    Scraping ASCE data, please wait...
+                    {% endif %}
+                </p>
                 <div class="spinner"></div>
             </div>
         </form>

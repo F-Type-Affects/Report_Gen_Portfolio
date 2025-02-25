@@ -8,6 +8,7 @@ import os
 import time
 from redis import Redis
 import requests
+import shutil
 
 # Module imports
 from .auth import get_authorization_url, exchange_code_for_token, decode_id_token, get_user_info
@@ -18,9 +19,10 @@ from .models import Project, Client, ASCESummaryData, WindData, SeismicData, Ice
 from .config import get_config
 from .ahj_manager import search_ahj_registry, perform_bing_search
 from .create_project import get_clients_by_name, get_employees, fetch_manager_id, send_create_project_request
-from .export_project_details import create_workbook, insert_project_data, insert_client_data, insert_ahj_data, save_workbook, update_workbook_with_summary, find_report_workbook
+from .export_project_details import create_workbook, insert_project_data, insert_client_data, insert_ahj_data, save_workbook, update_workbook_with_summary, find_report_workbook, find_project_directory
 from .cover_letter import generate_cover_letter
 from .asce_hazard_summary import ASCEScraper
+from .asce_hazard_report import ASCEReportScraper
 
 config = get_config()
 
@@ -503,6 +505,9 @@ def generate_cover_letter_confirmed():
 """
 App routes to scrape ASCE hazard tool for summary table and Full Report
 """
+"""
+This app route handles scraping the ASCE site for the summary table
+"""
 @app.route('/generate_asce_summary', methods=['GET', 'POST'])
 def generate_asce_summary():
     """
@@ -707,7 +712,10 @@ def generate_asce_summary():
         logger.error(f"Error in generate_asce_summary: {str(e)}")
         flash('An unexpected error occurred. Please try again.', 'error')
         return redirect(url_for('home'))
-
+    
+"""
+This app route saves the extracted summary table to the AHJ report workbook after the results are displayed to the user
+"""
 @app.route('/save_summary_report', methods=['POST'])
 def save_summary_report():
     try:
@@ -739,6 +747,160 @@ def save_summary_report():
         logger.error(f"Error saving summary report: {str(e)}")
         flash('An unexpected error occurred while saving the report.', 'error')
         return redirect(url_for('home'))
+
+"""
+This app route handles scraping the ASCE website for the the full report and saves it to the appropriate project sub directory
+"""
+@app.route('/generate_asce_full_report', methods=['GET', 'POST'])
+def generate_asce_full_report():
+    """
+    App route to generate and download a full ASCE report PDF.
+    - GET: Display the options form
+    - POST: Process the form and download the report
+    """
+    if request.method == 'GET':
+        # Get required session data
+        selected_email = session.get('selected_email')
+        if not selected_email:
+            flash('No email selected. Please select an email first.', 'error')
+            return redirect(url_for('select_user_email_get'))
+
+        project_number = request.args.get('project_number')
+        if not project_number:
+            flash('Please enter a project number.', 'error')
+            return redirect(url_for('fetch_project_number_get'))
+            
+        # Get project data
+        project_data = get_project_by_code(project_number, selected_email)
+        if not project_data:
+            flash('Project not found. Please check the Project ID and try again.', 'error')
+            return redirect(url_for('fetch_project_number_get'))
+        
+        # Create Project instance
+        project = Project.from_dict(project_data[0])
+        
+        # Validate project address
+        if not all([project.street1, project.city, project.state, project.zip_code]):
+            flash('Project address is incomplete. Please verify the project has a complete address.', 'error')
+            return redirect(url_for('fetch_project_number_get'))
+
+        # Store data in session
+        session['project_data'] = {
+            'code': project_number,
+            'name': project.name,
+            'purchase_order_number': project.purchase_order_number,
+            'billing_contact': project.billing_contact,
+            'street1': project.street1,
+            'street2': project.street2,
+            'city': project.city,
+            'state': project.state,
+            'zip_code': project.zip_code
+        }
+
+        # Display the options form with project data
+        return render_template('select_asce_options.html',
+                             project_data=session['project_data'])
+    
+    # Handle POST request
+    try:
+        # Get required session data
+        selected_email = session.get('selected_email')
+        if not selected_email:
+            flash('No email selected. Please select an email first.', 'error')
+            return redirect(url_for('select_user_email_get'))
+        
+        # Get project data from session
+        project_data = session.get('project_data')
+        if not project_data or not project_data.get('code'):
+            flash('Project data not found. Please try again.', 'error')
+            return redirect(url_for('fetch_project_number_get'))
+            
+        project_number = project_data['code']
+            
+        # Get project address from session
+        address = f"{project_data['street1']}, {project_data['city']}, {project_data['state']}, {project_data['zip_code']}"
+        
+        # Get form data
+        standard_version = request.form.get('standard_version')
+        risk_category = request.form.get('risk_category')
+        soil_class = request.form.get('soil_class')
+
+        if not all([standard_version, risk_category, soil_class]):
+            flash('Please select all required ASCE options.', 'error')
+            return redirect(url_for('generate_asce_full_report'))
+        
+        # Find project directory
+        project_dir = find_project_directory(project_number)
+        if not project_dir:
+            flash(f'Project directory not found for project code: {project_number}', 'error')
+            return redirect(url_for('home'))
+
+        # Determine the correct subdirectory based on project type
+        is_pool = 'P' in project_number.upper()
+        if is_pool:
+            report_dir = os.path.join(project_dir, "Eng")
+        else:
+            report_dir = os.path.join(project_dir, "ENG", "Calculations")
+            
+        # Verify the directory exists
+        if not os.path.exists(report_dir):
+            logger.error(f"Required directory does not exist: {report_dir}")
+            flash(f'The required directory does not exist: {report_dir}. Please contact IT support.', 'error')
+            return redirect(url_for('home'))
+        
+        # Create a unique filename with project ID and timestamp
+        timestamp = time.strftime("%Y%m%d-%H%M%S")
+        filename = f"ASCE_Report_{project_number}_{timestamp}.pdf"
+        destination_path = os.path.join(report_dir, filename)
+        
+        # Initialize the scraper
+        scraper = ASCEReportScraper()
+        
+        try:
+            logger.info(f"Starting ASCE report download for project {project_number}")
+            
+            # Execute scraping
+            success, error_msg, temp_path = scraper.run_report_download(
+                address=address,
+                standard_version=standard_version,
+                risk_category=risk_category,
+                soil_class=soil_class
+            )
+            
+            if not success:
+                flash(f'Failed to download ASCE report: {error_msg}', 'error')
+                return redirect(url_for('home'))
+                
+            try:
+                # Verify the directory exists
+                if not os.path.exists(report_dir):
+                    logger.error(f"Required directory does not exist: {report_dir}")
+                    flash(f'The required directory does not exist: {report_dir}. Please contact IT support.', 'error')
+                    return redirect(url_for('home'))
+        
+                # Copy from temp path to final destination
+                shutil.copy2(temp_path, destination_path)
+                logger.info(f"Report saved to: {destination_path}")
+    
+                # Clean up the temporary file
+                os.remove(temp_path)
+    
+                flash(f'ASCE report successfully generated and saved to: {destination_path}', 'success')
+            except Exception as e:
+                logger.error(f"Error saving report: {str(e)}")
+                flash('Failed to save the report to the project directory.', 'error')
+    
+            return redirect(url_for('home'))
+            
+        finally:
+            # Always perform cleanup to ensure resources are released
+            scraper.cleanup()
+        
+    except Exception as e:
+        logger.error(f"Error in generate_asce_full_report: {str(e)}")
+        flash('An unexpected error occurred. Please try again.', 'error')
+        return redirect(url_for('home'))
+
 
 """
 End of ASCE web scraping app routes

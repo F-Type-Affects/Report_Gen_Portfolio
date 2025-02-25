@@ -1,4 +1,3 @@
-<!-- Updated form section in select_project_number.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -34,6 +33,7 @@
                 <button type="button" onclick="submitForm('generate_ahj_report')" class="btn">Generate AHJ Report</button>
                 <button type="button" onclick="submitForm('generate_cover_letter')" class="btn">Generate Cover Letter</button>
                 <button type="button" onclick="submitForm('generate_asce_summary')" class="btn">Generate ASCE Summary</button>
+                <button type="button" onclick="submitForm('generate_asce_full_report')" class="btn">Generate ASCE Full Report</button>
                 <button type="button" onclick="window.location.href='{{ url_for('select_user_email_get') }}'" class="btn back-btn">Back</button>
             </div>
             
@@ -45,31 +45,34 @@
     </div>
 
     <script>
-        // Update the submitForm function in select_project_number.html
-function submitForm(action) {
-    const form = document.getElementById('projectForm');
-    const projectNumber = document.getElementById('project_number').value;
-    
-    if (!projectNumber) {
-        alert('Please enter a project number');
-        return;
-    }
+        function submitForm(action) {
+            const form = document.getElementById('projectForm');
+            const projectNumber = document.getElementById('project_number').value;
+            
+            if (!projectNumber) {
+                alert('Please enter a project number');
+                return;
+            }
 
-    if (action === 'generate_ahj_report') {
-        form.action = "{{ url_for('generate_ahj_report') }}";
-    } else if (action === 'generate_cover_letter') {
-        form.action = "{{ url_for('generate_cover_letter_route') }}";
-    } else if (action === 'generate_asce_summary') {
-        // For ASCE summary, we need to use GET method
-        window.location.href = "{{ url_for('generate_asce_summary') }}?project_number=" + projectNumber;
-        return;
-    }
-    
-    // Show loading spinner
-    document.getElementById('loading-spinner').style.display = 'block';
-    
-    form.submit();
-}
+            if (action === 'generate_ahj_report') {
+                form.action = "{{ url_for('generate_ahj_report') }}";
+            } else if (action === 'generate_cover_letter') {
+                form.action = "{{ url_for('generate_cover_letter_route') }}";
+            } else if (action === 'generate_asce_summary') {
+                // For ASCE summary, we need to use GET method
+                window.location.href = "{{ url_for('generate_asce_summary') }}?project_number=" + projectNumber;
+                return;
+            } else if (action === 'generate_asce_full_report') {
+                // For ASCE full report, we also use GET method
+                window.location.href = "{{ url_for('generate_asce_full_report') }}?project_number=" + projectNumber;
+                return;
+            }
+            
+            // Show loading spinner
+            document.getElementById('loading-spinner').style.display = 'block';
+            
+            form.submit();
+        }
     </script>
 </body>
 </html>

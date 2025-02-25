@@ -89,3 +89,41 @@ label {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
 }
+
+/* Add styling for the full report button */
+.full-report-btn {
+    background-color: #dc3545;  /* Red to differentiate from the summary button */
+    margin-left: 10px;
+}
+
+.full-report-btn:hover {
+    opacity: 0.9;
+}
+
+/* Make buttons side by side on wider screens */
+@media (min-width: 768px) {
+    .button-group {
+        display: flex;
+        justify-content: center;
+        gap: 10px;
+    }
+    
+    .submit-btn, .back-btn {
+        flex: 0 0 auto;
+        width: auto;
+    }
+}
+
+/* Keep buttons stacked on smaller screens */
+@media (max-width: 767px) {
+    .button-group {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .full-report-btn {
+        margin-left: 0;
+        margin-top: 10px;
+    }
+}
