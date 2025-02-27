@@ -213,11 +213,8 @@ class ASCEScraper:
             options.page_load_strategy = 'normal'
             options.add_argument('--no-sandbox')
             options.add_argument('--headless')
-<<<<<<< HEAD
-=======
             options.add_argument('--no-sandbox')
             options.add_argument('--disable-dev-shm-usage')
->>>>>>> a21417316928f4dfb1fde3f0d66e4e75561e7e98
             options.add_argument(f'--user-data-dir={self.temp_dir}')
             
             self.driver = webdriver.Chrome(options=options)
