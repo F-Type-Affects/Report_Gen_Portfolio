@@ -213,6 +213,11 @@ class ASCEScraper:
             options.page_load_strategy = 'normal'
             options.add_argument('--no-sandbox')
             options.add_argument('--headless')
+<<<<<<< HEAD
+=======
+            options.add_argument('--no-sandbox')
+            options.add_argument('--disable-dev-shm-usage')
+>>>>>>> a21417316928f4dfb1fde3f0d66e4e75561e7e98
             options.add_argument(f'--user-data-dir={self.temp_dir}')
             
             self.driver = webdriver.Chrome(options=options)
@@ -354,6 +359,20 @@ class ASCEScraper:
         except Exception as e:
             self.logger.error(f"Error saving to Excel: {str(e)}")
             return None
+    
+    def cleanup(self):
+        """Cleanup resources"""
+        try:
+            if self.driver:
+                self.driver.quit()
+                self.driver = None
+            
+            if hasattr(self, 'temp_dir'):
+                import shutil
+                shutil.rmtree(self.temp_dir, ignore_errors=True)
+        except Exception as e:
+            self.logger.error(f"Error during cleanup: {str(e)}")
+                
 
     def cleanup(self):
         """Cleanup resources"""

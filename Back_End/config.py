@@ -78,7 +78,7 @@ class ProductionConfig(Config):
     COVER_LETTER_POOLS_OUTPUT = os.getenv('COVER_LETTER_POOLS_OUTPUT')
     
     # logging settings
-    LOG_LEVEL = min(logging.WARNING, logging.INFO)
+    LOG_LEVEL = logging.WARNING
     DEBUG = False
     
 # Function to get the correct configuration
