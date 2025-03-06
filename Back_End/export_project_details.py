@@ -8,6 +8,7 @@ from openpyxl.utils import get_column_letter
 from openpyxl.styles import Font, PatternFill
 from .models import ASCESummaryData
 from typing import Tuple
+import shutil
 
 config = get_config()
 
@@ -126,9 +127,50 @@ def insert_ahj_data(sheet, ahj_info, amendment_data):
     
     logger.debug("AHJ and amendment data inserted successfully.")
 
+def archive_ahj_report(ahj_report_dir, report_path):
+    """
+    Archives an existing AHJ report by moving it to an Archived_Reports subdirectory
+    with the current date appended to the filename.
+    
+    Args:
+        ahj_report_dir (str): The directory containing the AHJ report.
+        report_path (str): The full path to the existing report.
+        
+    Returns:
+        bool: True if archiving was successful, False otherwise.
+    """
+    try:
+        logger.info(f"Archiving existing report: {report_path}")
+        
+        # Create the archive directory if it doesn't exist
+        archive_dir = os.path.join(ahj_report_dir, "Archived_Reports")
+        if not os.path.exists(archive_dir):
+            os.makedirs(archive_dir)
+            logger.debug(f"Created archive directory: {archive_dir}")
+        
+        # Get the current date for the filename
+        current_date = datetime.datetime.now().strftime("%Y-%m-%d")
+        
+        # Create the new filename with date
+        report_filename = os.path.basename(report_path)
+        filename_without_ext, file_extension = os.path.splitext(report_filename)
+        archived_filename = f"{filename_without_ext}_{current_date}{file_extension}"
+        archived_path = os.path.join(archive_dir, archived_filename)
+        
+        # Move the file to the archive directory with the new name
+        shutil.move(report_path, archived_path)
+        logger.info(f"Report archived successfully to: {archived_path}")
+        return True
+    
+    except Exception as e:
+        logger.error(f"Failed to archive report: {e}")
+        return False
+
+
 def save_workbook(workbook, project_code):
     """
     Saves the workbook to the appropriate directory based on project code.
+    If a report already exist it will archive the old report before saving the new one
 
     Args:
         workbook (Workbook): The openpyxl workbook object.
@@ -147,8 +189,23 @@ def save_workbook(workbook, project_code):
 
     # Define the AHJ_REPORT directory within the project folder
     ahj_report_dir = os.path.join(project_dir, "AHJ_REPORT")
-    if not os.path.exists(ahj_report_dir):
-        os.makedirs(ahj_report_dir)  # Create the directory if it doesn't exist
+    
+    # Check if the AHJ_REPORT directory already exists
+    if os.path.exists(ahj_report_dir):
+        logger.info(f"AHJ_REPORT directory already exists: {ahj_report_dir}")
+        
+        # Check if there's an existing report
+        existing_report_path = os.path.join(ahj_report_dir, "AHJ_Report.xlsx")
+        if os.path.exists(existing_report_path):
+            logger.info(f"Existing report found: {existing_report_path}")
+            
+            # Archive the existing report
+            archive_success = archive_ahj_report(ahj_report_dir, existing_report_path)
+            if not archive_success:
+                logger.warning("Failed to archive existing report. Will overwrite.")
+    else:
+        # Create the directory if it doesn't exist
+        os.makedirs(ahj_report_dir)
         logger.debug(f"Created directory: {ahj_report_dir}")
 
     # Auto-adjust column widths before saving
