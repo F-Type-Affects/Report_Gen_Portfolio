@@ -9,6 +9,7 @@ import time
 from redis import Redis
 import requests
 import shutil
+import tempfile
 
 # Module imports
 from .auth import get_authorization_url, exchange_code_for_token, decode_id_token, get_user_info
@@ -23,6 +24,7 @@ from .export_project_details import create_workbook, insert_project_data, insert
 from .cover_letter import generate_cover_letter
 from .asce_hazard_summary import ASCEScraper
 from .asce_hazard_report import ASCEReportScraper
+from .soil_scraper import WebSoilSurveyScraper, SoilScraperConfig
 
 config = get_config()
 
@@ -860,18 +862,21 @@ def generate_asce_full_report():
             flash(f'Project directory not found for project code: {project_number}', 'error')
             return redirect(url_for('home'))
 
-        # Determine the correct subdirectory based on project type
-        is_pool = 'P' in project_number.upper()
-        if is_pool:
-            report_dir = os.path.join(project_dir, "Eng")
-        else:
-            report_dir = os.path.join(project_dir, "ENG", "Calculations")
-            
-        # Verify the directory exists
+        # Create the Project_Info directory if it doesn't exist
+        project_info_dir = os.path.join(project_dir, "Project_Info")
+        if not os.path.exists(project_info_dir):
+            os.makedirs(project_info_dir, exist_ok=True)
+            os.makedirs(os.path.join(project_info_dir, "AHJ_Report"), exist_ok=True)
+            os.makedirs(os.path.join(project_info_dir, "ASCE_Hazard_Report"), exist_ok=True)
+            os.makedirs(os.path.join(project_info_dir, "USDA_Soil_Reports"), exist_ok=True)
+            os.makedirs(os.path.join(project_info_dir, "Archived_AHJ_Reports"), exist_ok=True)
+            logger.info(f"Created Project_Info directory structure for project: {project_number}")
+
+        # Use the ASCE_Hazard_Report directory for both pool and non-pool projects
+        report_dir = os.path.join(project_info_dir, "ASCE_Hazard_Report")
         if not os.path.exists(report_dir):
-            logger.error(f"Required directory does not exist: {report_dir}")
-            flash(f'The required directory does not exist: {report_dir}. Please contact IT support.', 'error')
-            return redirect(url_for('home'))
+            os.makedirs(report_dir, exist_ok=True)
+            logger.info(f"Created ASCE_Hazard_Report directory: {report_dir}")
         
         # Create a unique filename with project ID and timestamp
         timestamp = time.strftime("%Y%m%d-%H%M%S")
@@ -926,10 +931,204 @@ def generate_asce_full_report():
         flash('An unexpected error occurred. Please try again.', 'error')
         return redirect(url_for('home'))
 
-
 """
 End of ASCE web scraping app routes
 """
+
+"""
+App route to handle scraping and downloading both USDA Soil Reports:
+    - Linear Extensability
+    - Unified Soil Classification
+"""
+@app.route('/generate_soil_survey', methods=['GET', 'POST'])
+def generate_soil_survey():
+    """
+    App route to generate and download Web Soil Survey reports (Linear Extensibility and Unified Soil Classification).
+    - GET: Display confirmation page with project data
+    - POST: Process and download the reports
+    """
+    if request.method == 'GET':
+        # Get required session data
+        selected_email = session.get('selected_email')
+        if not selected_email:
+            flash('No email selected. Please select an email first.', 'error')
+            return redirect(url_for('select_user_email_get'))
+
+        project_number = request.args.get('project_number')
+        if not project_number:
+            flash('Please enter a project number.', 'error')
+            return redirect(url_for('fetch_project_number_get'))
+            
+        # Get project data
+        project_data = get_project_by_code(project_number, selected_email)
+        if not project_data:
+            flash('Project not found. Please check the Project ID and try again.', 'error')
+            return redirect(url_for('fetch_project_number_get'))
+        
+        # Create Project instance
+        project = Project.from_dict(project_data[0])
+        
+        # Validate project address
+        if not all([project.street1, project.city, project.state, project.zip_code]):
+            flash('Project address is incomplete. Please verify the project has a complete address.', 'error')
+            return redirect(url_for('fetch_project_number_get'))
+
+        # Store data in session
+        session['project_data'] = {
+            'code': project_number,
+            'name': project.name,
+            'purchase_order_number': project.purchase_order_number,
+            'billing_contact': project.billing_contact,
+            'street1': project.street1,
+            'street2': project.street2,
+            'city': project.city,
+            'state': project.state,
+            'zip_code': project.zip_code
+        }
+
+        # Display confirmation page with project data
+        return render_template('confirm_soil_survey.html',
+                             project_data=session['project_data'])
+    
+    # Handle POST request
+    try:
+        # Get required session data
+        selected_email = session.get('selected_email')
+        if not selected_email:
+            flash('No email selected. Please select an email first.', 'error')
+            return redirect(url_for('select_user_email_get'))
+        
+        # Get project data from session
+        project_data = session.get('project_data')
+        if not project_data or not project_data.get('code'):
+            flash('Project data not found. Please try again.', 'error')
+            return redirect(url_for('fetch_project_number_get'))
+            
+        project_number = project_data['code']
+            
+        # Get project address from session
+        address = f"{project_data['street1']}, {project_data['city']}, {project_data['state']}, {project_data['zip_code']}"
+        
+        # Find project directory
+        project_dir = find_project_directory(project_number)
+        if not project_dir:
+            flash(f'Project directory not found for project code: {project_number}', 'error')
+            return redirect(url_for('home'))
+
+        # Create the Project_Info directory if it doesn't exist
+        project_info_dir = os.path.join(project_dir, "Project_Info")
+        if not os.path.exists(project_info_dir):
+            os.makedirs(project_info_dir, exist_ok=True)
+            os.makedirs(os.path.join(project_info_dir, "AHJ_Report"), exist_ok=True)
+            os.makedirs(os.path.join(project_info_dir, "ASCE_Hazard_Report"), exist_ok=True)
+            os.makedirs(os.path.join(project_info_dir, "USDA_Soil_Reports"), exist_ok=True)
+            os.makedirs(os.path.join(project_info_dir, "Archived_AHJ_Reports"), exist_ok=True)
+            logger.info(f"Created Project_Info directory structure for project: {project_number}")
+
+        # Use the USDA_Soil_Reports directory for the soil survey reports
+        report_dir = os.path.join(project_info_dir, "USDA_Soil_Reports")
+        if not os.path.exists(report_dir):
+            os.makedirs(report_dir, exist_ok=True)
+            logger.info(f"Created USDA_Soil_Reports directory: {report_dir}")
+        
+        # Create timestamp for unique filenames
+        timestamp = time.strftime("%Y%m%d-%H%M%S")
+        
+        # Create unique filenames for the two reports
+        linear_filename = f"Linear_Extensibility_{project_number}_{timestamp}.pdf"
+        soil_class_filename = f"Unified_Soil_Classification_{project_number}_{timestamp}.pdf"
+        
+        # Full paths for the destination files
+        linear_path = os.path.join(report_dir, linear_filename)
+        soil_class_path = os.path.join(report_dir, soil_class_filename)
+        
+        # Create a custom temporary directory for downloads
+        temp_download_dir = tempfile.mkdtemp()
+        logger.info(f"Created temporary download directory: {temp_download_dir}")
+
+        # Initialize the scraper with the custom download directory
+        config = SoilScraperConfig(download_directory=temp_download_dir, wait_time=90)
+        scraper = WebSoilSurveyScraper(config)
+        
+        # After executing scraping
+        success, error_msg, temp_paths = scraper.run_soil_survey(address=address)
+
+        if not success:
+            flash(f'Failed to download USDA soil reports: {error_msg}', 'error')
+            return redirect(url_for('home'))
+
+        try:
+            # Verify the directory exists
+            if not os.path.exists(report_dir):
+                logger.error(f"Required directory does not exist: {report_dir}")
+                flash(f'The required directory does not exist: {report_dir}. Please contact IT support.', 'error')
+                return redirect(url_for('home'))
+
+            # Make sure we have at least one PDF
+            if not temp_paths:
+                flash('No soil reports were downloaded. Please try again.', 'error')
+                return redirect(url_for('home'))
+        
+            # Save downloaded reports based on how many we found
+            if len(temp_paths) >= 1:
+                # First file - Linear Extensibility
+                first_file_path = temp_paths[0]
+                logger.info(f"Linear Extensibility Report Path: {first_file_path}")
+        
+                if os.path.exists(first_file_path) and os.path.getsize(first_file_path) > 0:
+                    # Copy from temp path to final destination
+                    shutil.copy2(first_file_path, linear_path)
+                    logger.info(f"Linear Extensibility report saved to: {linear_path}")
+            
+                    # Clean up the temporary file
+                    try:
+                        os.remove(first_file_path)
+                    except Exception as e:
+                        logger.warning(f"Could not remove temporary file: {str(e)}")
+    
+            if len(temp_paths) >= 2:
+                # Second file - Unified Soil Classification
+                second_file_path = temp_paths[1]
+                logger.info(f"Unified Soil Classification Report Path: {second_file_path}")
+        
+                if os.path.exists(second_file_path) and os.path.getsize(second_file_path) > 0:
+                 # Copy from temp path to final destination
+                    shutil.copy2(second_file_path, soil_class_path)
+                    logger.info(f"Unified Soil Classification report saved to: {soil_class_path}")
+            
+                    # Clean up the temporary file
+                    try:
+                        os.remove(second_file_path)
+                    except Exception as e:
+                        logger.warning(f"Could not remove temporary file: {str(e)}")
+    
+            flash(f'USDA soil reports successfully generated and saved to: {report_dir}', 'success')
+            return redirect(url_for('home'))
+        
+        except Exception as e:
+            logger.error(f"Error saving reports: {str(e)}")
+            flash('Failed to save the reports to the project directory.', 'error')
+            return redirect(url_for('home'))
+            
+        finally:
+            # Always perform cleanup to ensure resources are released
+            scraper.cleanup()
+            
+            # Clean up temp directory
+            try:
+                shutil.rmtree(temp_download_dir, ignore_errors=True)
+                logger.info(f"Removed temporary directory: {temp_download_dir}")
+            except Exception as e:
+                logger.warning(f"Failed to remove temporary directory: {str(e)}")
+        
+    except Exception as e:
+        logger.error(f"Error in generate_soil_survey: {str(e)}")
+        flash('An unexpected error occurred. Please try again.', 'error')
+        return redirect(url_for('home'))
+
+"""End of USDA Soil Reports App Route
+"""
+
 
 """Helper functions to get specefic user data for calls to endpoints"""
 def login_user(sub):

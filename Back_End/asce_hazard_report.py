@@ -86,6 +86,7 @@ class ASCEReportScraper:
                 shutil.rmtree(self.temp_dir, ignore_errors=True)
             return False
 
+
     def initial_page_load(self, timeout: int = 40) -> Tuple[bool, Dict[str, bool]]:
         """
         Optimized initial page load detection that checks essential elements.

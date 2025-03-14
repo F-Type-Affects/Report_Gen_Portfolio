@@ -1,0 +1,148 @@
+/* confirm_soil_survey.css */
+
+body {
+    background-color: #f4f4f9;
+    font-family: 'Arial', sans-serif;
+    color: #333;
+    margin: 0;
+    padding: 0;
+}
+
+header {
+    background-color: #007ACC;
+    color: white;
+    padding: 15px 0;
+    text-align: center;
+}
+
+header h1 {
+    margin: 0;
+    font-size: 24px;
+}
+
+.container {
+    max-width: 800px;
+    margin: 30px auto;
+    padding: 25px;
+    background-color: #fff;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.project-info {
+    background-color: #f9f9f9;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 25px;
+    border-left: 4px solid #007ACC;
+}
+
+.project-info h2 {
+    color: #007ACC;
+    margin-top: 0;
+    margin-bottom: 15px;
+    font-size: 20px;
+}
+
+.project-info p {
+    margin: 8px 0;
+    line-height: 1.5;
+}
+
+.confirm-action {
+    background-color: #f1f1f1;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 25px;
+    border-left: 4px solid #28a745;
+}
+
+.confirm-action p {
+    margin: 10px 0;
+    line-height: 1.5;
+}
+
+.confirm-action ul {
+    margin: 15px 0;
+    padding-left: 25px;
+}
+
+.confirm-action li {
+    margin-bottom: 8px;
+}
+
+.button-group {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    margin-top: 25px;
+}
+
+.btn {
+    padding: 12px 25px;
+    font-size: 16px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.btn[type="submit"] {
+    background-color: #28a745;
+    color: white;
+}
+
+.btn[type="submit"]:hover {
+    background-color: #218838;
+}
+
+.back-btn {
+    background-color: #6c757d;
+    color: white;
+}
+
+.back-btn:hover {
+    background-color: #5a6268;
+}
+
+#loading-spinner {
+    text-align: center;
+    margin-top: 30px;
+}
+
+#loading-spinner p {
+    margin-bottom: 15px;
+    font-size: 18px;
+    color: #007ACC;
+}
+
+.spinner {
+    border: 16px solid #f3f3f3;
+    border-top: 16px solid #007ACC;
+    border-radius: 50%;
+    width: 80px;
+    height: 80px;
+    animation: spin 2s linear infinite;
+    margin: 0 auto;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+@media (max-width: 768px) {
+    .container {
+        max-width: 95%;
+        padding: 15px;
+    }
+    
+    .button-group {
+        flex-direction: column;
+    }
+    
+    .btn {
+        width: 100%;
+        margin-bottom: 10px;
+    }
+}

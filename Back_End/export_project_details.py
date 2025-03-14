@@ -127,14 +127,88 @@ def insert_ahj_data(sheet, ahj_info, amendment_data):
     
     logger.debug("AHJ and amendment data inserted successfully.")
 
-def archive_ahj_report(ahj_report_dir, report_path):
+def copy_asce_summary(source_path, new_workbook):
     """
-    Archives an existing AHJ report by moving it to an Archived_Reports subdirectory
+    Copies the ASCE Summary sheet from an existing workbook to a new workbook.
+    
+    Args:
+        source_path (str): Path to the source workbook
+        new_workbook (openpyxl.Workbook): The new workbook object
+        
+    Returns:
+        bool: True if copying was successful, False otherwise
+    """
+    try:
+        # Load the source workbook
+        source_wb = openpyxl.load_workbook(source_path)
+        
+        # Check if "ASCE Summary" sheet exists
+        if "ASCE Summary" in source_wb.sheetnames:
+            logger.info("ASCE Summary sheet found - copying to new workbook")
+            
+            # Get the ASCE Summary sheet from source
+            source_sheet = source_wb["ASCE Summary"]
+            
+            # Check if the sheet already exists in the target workbook
+            if "ASCE Summary" in new_workbook.sheetnames:
+                # Remove the existing sheet
+                new_workbook.remove(new_workbook["ASCE Summary"])
+            
+            # Create a new sheet in the target workbook
+            target_sheet = new_workbook.create_sheet(title="ASCE Summary")
+            
+            # Copy cell values and styles
+            for row in source_sheet.rows:
+                for cell in row:
+                    target_cell = target_sheet.cell(
+                        row=cell.row, 
+                        column=cell.column,
+                        value=cell.value
+                    )
+                    
+                    # Copy cell styles
+                    if cell.has_style:
+                        import copy
+                        target_cell.font = copy.copy(cell.font)
+                        target_cell.border = copy.copy(cell.border)
+                        target_cell.fill = copy.copy(cell.fill)
+                        target_cell.number_format = cell.number_format
+                        target_cell.alignment = copy.copy(cell.alignment)
+            
+            # Copy column dimensions
+            for col, dimension in source_sheet.column_dimensions.items():
+                target_sheet.column_dimensions[col].width = dimension.width
+            
+            # Copy row dimensions
+            for row, dimension in source_sheet.row_dimensions.items():
+                target_sheet.row_dimensions[row].height = dimension.height
+            
+            # Copy merged cells
+            for merged_cell_range in source_sheet.merged_cells:
+                target_sheet.merge_cells(str(merged_cell_range))
+            
+            logger.info("ASCE Summary sheet successfully copied")
+            source_wb.close()
+            return True
+        else:
+            logger.info("No ASCE Summary sheet found in workbook")
+            source_wb.close()
+            return False
+    
+    except Exception as e:
+        logger.error(f"Error copying ASCE Summary sheet: {str(e)}")
+        return False
+
+
+def archive_ahj_report(project_info_dir, report_path, new_workbook):
+    """
+    Archives an existing AHJ report by moving it to the Archived_AHJ_Reports subdirectory
     with the current date appended to the filename.
     
     Args:
-        ahj_report_dir (str): The directory containing the AHJ report.
+        project_info_dir (str): The main Project_Info directory.
         report_path (str): The full path to the existing report.
+        new_workbook (openpyxl.Workbook): The new workbook being created
         
     Returns:
         bool: True if archiving was successful, False otherwise.
@@ -142,8 +216,11 @@ def archive_ahj_report(ahj_report_dir, report_path):
     try:
         logger.info(f"Archiving existing report: {report_path}")
         
-        # Create the archive directory if it doesn't exist
-        archive_dir = os.path.join(ahj_report_dir, "Archived_Reports")
+        # Check if the existing workbook has an ASCE Summary sheet and copy it
+        copy_asce_summary(report_path, new_workbook)
+        
+        # Use the predefined Archived_AHJ_Reports directory
+        archive_dir = os.path.join(project_info_dir, "Archived_AHJ_Reports")
         if not os.path.exists(archive_dir):
             os.makedirs(archive_dir)
             logger.debug(f"Created archive directory: {archive_dir}")
@@ -166,7 +243,6 @@ def archive_ahj_report(ahj_report_dir, report_path):
         logger.error(f"Failed to archive report: {e}")
         return False
 
-
 def save_workbook(workbook, project_code):
     """
     Saves the workbook to the appropriate directory based on project code.
@@ -187,12 +263,20 @@ def save_workbook(workbook, project_code):
         logger.error(f"Project directory not found for project code: {project_code}")
         return None
 
-    # Define the AHJ_REPORT directory within the project folder
-    ahj_report_dir = os.path.join(project_dir, "AHJ_REPORT")
+    # Define the Project_Info directory within the project folder (changed from AHJ_REPORT)
+    project_info_dir = os.path.join(project_dir, "Project_Info")
     
-    # Check if the AHJ_REPORT directory already exists
-    if os.path.exists(ahj_report_dir):
-        logger.info(f"AHJ_REPORT directory already exists: {ahj_report_dir}")
+    # Define the AHJ_Report subdirectory
+    ahj_report_dir = os.path.join(project_info_dir, "AHJ_Report")
+    
+    # Check if the Project_Info directory already exists
+    if os.path.exists(project_info_dir):
+        logger.info(f"Project_Info directory already exists: {project_info_dir}")
+        
+        # Check if the AHJ_Report subdirectory exists, create if not
+        if not os.path.exists(ahj_report_dir):
+            os.makedirs(ahj_report_dir)
+            logger.debug(f"Created AHJ_Report subdirectory: {ahj_report_dir}")
         
         # Check if there's an existing report
         existing_report_path = os.path.join(ahj_report_dir, "AHJ_Report.xlsx")
@@ -200,13 +284,21 @@ def save_workbook(workbook, project_code):
             logger.info(f"Existing report found: {existing_report_path}")
             
             # Archive the existing report
-            archive_success = archive_ahj_report(ahj_report_dir, existing_report_path)
+            archive_success = archive_ahj_report(project_info_dir, existing_report_path, workbook)
             if not archive_success:
                 logger.warning("Failed to archive existing report. Will overwrite.")
     else:
-        # Create the directory if it doesn't exist
-        os.makedirs(ahj_report_dir)
-        logger.debug(f"Created directory: {ahj_report_dir}")
+        # Create the main directory and all subdirectories if they don't exist
+        os.makedirs(project_info_dir, exist_ok=True)
+        logger.debug(f"Created main directory: {project_info_dir}")
+        
+        # Create the four required subdirectories
+        os.makedirs(ahj_report_dir, exist_ok=True)
+        os.makedirs(os.path.join(project_info_dir, "ASCE_Hazard_Report"), exist_ok=True)
+        os.makedirs(os.path.join(project_info_dir, "USDA_Soil_Reports"), exist_ok=True)
+        os.makedirs(os.path.join(project_info_dir, "Archived_AHJ_Reports"), exist_ok=True)
+        
+        logger.debug(f"Created all required subdirectories in: {project_info_dir}")
 
     # Auto-adjust column widths before saving
     auto_adjust_column_width(workbook.active)
@@ -324,11 +416,17 @@ def find_report_workbook(project_code):
             logger.error(f"Project directory not found for project code: {project_code}")
             return False, "Project directory not found"
 
-        # Look for AHJ_REPORT subdirectory
-        ahj_report_dir = os.path.join(project_dir, "AHJ_REPORT")
+        # Look for Project_Info directory
+        project_info_dir = os.path.join(project_dir, "Project_Info")
+        if not os.path.exists(project_info_dir):
+            logger.error(f"Project_Info directory not found in project folder: {project_dir}")
+            return False, "Project_Info directory not found"
+
+        # Look for AHJ_Report subdirectory
+        ahj_report_dir = os.path.join(project_info_dir, "AHJ_Report")
         if not os.path.exists(ahj_report_dir):
-            logger.error(f"AHJ_REPORT directory not found in project folder: {project_dir}")
-            return False, "AHJ_REPORT directory not found"
+            logger.error(f"AHJ_Report directory not found in Project_Info folder: {project_info_dir}")
+            return False, "AHJ_Report directory not found"
 
         # Look for the workbook file
         workbook_path = os.path.join(ahj_report_dir, "AHJ_Report.xlsx")

@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Confirm Soil Survey</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/confirm_soil_survey.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/flash_message.css') }}">
+</head>
+<body>
+    {% include 'flash_message.html' %}
+    <header>
+        <h1>Confirm Soil Survey Reports</h1>
+    </header>
+    
+    <div class="container">
+        <div class="project-info">
+            <h2>Project Information</h2>
+            <p><strong>Project Number:</strong> {{ project_data.code }}</p>
+            <p><strong>Project Name:</strong> {{ project_data.name }}</p>
+            <p><strong>Project Address:</strong> {{ project_data.street1 }}, {{ project_data.city }}, {{ project_data.state }}, {{ project_data.zip_code }}</p>
+        </div>
+        
+        <div class="confirm-action">
+            <p>You are about to generate the following USDA soil reports:</p>
+            <ul>
+                <li>Linear Extensibility Report</li>
+                <li>Unified Soil Classification Report</li>
+            </ul>
+            <p>This process may take several minutes. Please do not close your browser.</p>
+        </div>
+        
+        <form action="{{ url_for('generate_soil_survey') }}" method="POST">
+            <div class="button-group">
+                <button type="submit" class="btn">Generate Reports</button>
+                <button type="button" onclick="window.location.href='{{ url_for('fetch_project_number_get') }}'" class="btn back-btn">Cancel</button>
+            </div>
+            
+            <div id="loading-spinner" style="display:none;">
+                <p>Processing request, please wait...</p>
+                <div class="spinner"></div>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        document.querySelector('form').addEventListener('submit', function() {
+            document.getElementById('loading-spinner').style.display = 'block';
+        });
+    </script>
+</body>
+</html>
