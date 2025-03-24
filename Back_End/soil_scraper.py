@@ -82,6 +82,7 @@ class WebSoilSurveyScraper:
             options.add_argument('--disable-extensions')
             options.add_argument('--disable-dev-shm-usage')
             options.add_argument('--no-sandbox')
+            options.add_argument('--headless')
         
             self.driver = webdriver.Chrome(options=options)
             self.driver.maximize_window()
@@ -313,8 +314,8 @@ class WebSoilSurveyScraper:
     
     def select_aoi_by_rectangle(self) -> bool:
         """
-        Selects an Area of Interest (AOI) by dragging a small test rectangle
-        starting at the map's absolute position.
+        Selects an Area of Interest (AOI) by dragging a rectangle using JavaScript
+        to dispatch synthetic mouse events. Captures approximately 75% of the map area.
     
         Returns:
             bool: True if successful, False otherwise
@@ -323,58 +324,66 @@ class WebSoilSurveyScraper:
             # Wait for the map to load completely
             self.logger.info("Waiting for map to load completely...")
             time.sleep(5)
-        
+    
             # 1. Click the AOI Rectangle button
             aoi_button = self.wait_for_element_clickable("#aoi_rectangle_up")
             if not aoi_button:
                 self.logger.error("AOI Rectangle button not found")
                 return False
-        
+    
             if not self.click_element(aoi_button, "AOI Rectangle button"):
                 return False
-        
+    
             self.logger.info("AOI Rectangle button clicked successfully")
             time.sleep(2)  # Wait for the tool to activate
         
-            # 2. Use the known absolute coordinates of the map (420, 220)
-            start_x = 420
-            start_y = 220
+            # 2. Use JavaScript to dispatch synthetic mouse events for rectangle drawing
+            js_script = """
+            // Find the map element where the AOI selection happens
+            const map = document.getElementById("maplayers_div_id");
+            if (!map) { return "Map element not found"; }
         
-            # 3. Create a small 100x100 test rectangle
-            rectangle_width = 1500
-            rectangle_height = 720
+            // Get the bounding rectangle of the map
+            const rect = map.getBoundingClientRect();
         
-            self.logger.info(f"Drawing test rectangle from ({start_x},{start_y}) with size 1500x720")
+            // Define start and end coordinates to cover 75% of the map area
+            const startX = rect.left + (rect.width * 0.125);  // 12.5% from left
+            const startY = rect.top + (rect.height * 0.125);  // 12.5% from top
+            const endX = rect.left + (rect.width * 0.875);    // 87.5% from left
+            const endY = rect.top + (rect.height * 0.875);    // 87.5% from top
         
-            # 4. Execute the drag operation using absolute coordinates
-            actions = ActionChains(self.driver)
+            // Utility function to dispatch a mouse event with given type and coordinates
+            function triggerMouseEvent(node, eventType, clientX, clientY) {
+                const event = new MouseEvent(eventType, {
+                    view: window,
+                    bubbles: true,
+                    cancelable: true,
+                    clientX: clientX,
+                    clientY: clientY
+                });
+                node.dispatchEvent(event);
+            }
         
-            # Reset mouse position (move to 0,0)
-            actions.move_by_offset(0, 0)
-            actions.perform()
+            // Dispatch the synthetic events: mousedown, mousemove, and mouseup
+            triggerMouseEvent(map, 'mousedown', startX, startY);
+            triggerMouseEvent(map, 'mousemove', endX, endY);
+            triggerMouseEvent(map, 'mouseup', endX, endY);
         
-            # Create new action chain
-            actions = ActionChains(self.driver)
+            return `Rectangle drawn from (${startX.toFixed(0)},${startY.toFixed(0)}) to (${endX.toFixed(0)},${endY.toFixed(0)})`;
+        """
         
-            # Move to the start point and draw rectangle
-            actions.move_by_offset(start_x, start_y)
-            actions.click_and_hold()
-            actions.move_by_offset(rectangle_width, rectangle_height)
-            actions.release()
-            actions.perform()
-        
-            self.logger.info("Test rectangle drag operation completed")
+            result = self.driver.execute_script(js_script)
+            self.logger.info(f"JavaScript result: {result}")
         
             # Wait for any processing after rectangle selection
-            time.sleep(3)
+            time.sleep(5)
         
             return True
-        
+    
         except Exception as e:
-            self.logger.error(f"Error during AOI test rectangle selection: {str(e)}")
+            self.logger.error(f"Error during AOI rectangle selection: {str(e)}")
             return False
-        
-        
+           
     def scroll_window(self, pixels: int = 300) -> bool:
         """
         Scrolls the window by the specified number of pixels.
@@ -550,14 +559,14 @@ class WebSoilSurveyScraper:
             if not self.click_element(start_button, "Start WSS button"):
                 return False
             
-            time.sleep(3)
+            time.sleep(5)
             
             # 3. Switch to the new tab
             if not self.switch_to_new_tab():
                 return False
             
             # 4. Wait for the page to load in the new tab
-            time.sleep(8)
+            time.sleep(12)
             
             # 6. Click the address dropdown button
             self.logger.info("Clicking address button...")
@@ -594,7 +603,7 @@ class WebSoilSurveyScraper:
                 return False
             
             # 9. Wait for the search to complete
-            time.sleep(5)
+            time.sleep(10)
             
             # 10. Select AOI by rectangle
             self.logger.info("Starting AOI rectangle selection...")
@@ -602,7 +611,7 @@ class WebSoilSurveyScraper:
                 self.logger.error("AOI rectangle selection failed")
                 return False
             
-            time.sleep(10)
+            time.sleep(12)
             
             # 11. Navigate to Soil Data Explorer tab
             self.logger.info("Attempting to click Soil Data Explorer tab...")
@@ -614,7 +623,7 @@ class WebSoilSurveyScraper:
             if not self.click_element(soil_data_tab, "Soil Data Explorer tab"):
                 return False
             
-            time.sleep(10)
+            time.sleep(12)
             
             # 12. Navigate to Soil Properties and Qualities tab
             self.logger.info("Attempting to click Soil Properties and Qualities tab...")
@@ -679,6 +688,8 @@ class WebSoilSurveyScraper:
 
             if not self.enter_text(top_depth_input, "2", "Top Depth field"):
                 return False
+            
+            time.sleep(2)
 
             # 18. Enter Bottom Depth value (60)
             self.logger.info("Entering 60 for bottom depth")
@@ -731,7 +742,7 @@ class WebSoilSurveyScraper:
                 return False
 
             # Wait for the printable version options to load/expand
-            time.sleep(3)
+            time.sleep(5)
             
             # 22. Enter the address into the Custom Subtitle field
             self.logger.info("Entering address into Custom Subtitle field...")
@@ -761,7 +772,7 @@ class WebSoilSurveyScraper:
             
             # 24. Scroll the window
             self.logger.info("Scrolling down to see additional options. . .")
-            if not self.scroll_window(500):
+            if not self.scroll_window(450):
                 self.logger.warning("Failed to scroll window")
                 
             time.sleep(3)
@@ -780,7 +791,7 @@ class WebSoilSurveyScraper:
             
             # 26. Scroll the window
             self.logger.info("Scrolling down to see additional options. . .")
-            if not self.scroll_window(300):
+            if not self.scroll_window(400):
                 self.logger.warning("Failed to scroll window")
                 
             time.sleep(2)
@@ -811,7 +822,7 @@ class WebSoilSurveyScraper:
             
             # 29. Scroll back up to access the printable version
             self.logger.info("Scrolling up to see additional options. . .")
-            if not self.scroll_window(-900):
+            if not self.scroll_window(-800):
                 self.logger.warning("Failed to scroll window")
                 
             time.sleep(2)
