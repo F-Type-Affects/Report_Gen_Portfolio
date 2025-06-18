@@ -17,3 +17,7 @@ Thumbs.db
 # Other files to ignore
 *.log
 Back_End/token_storage.db
+
+# ChromeDriver executables
+Back_End/utils/drivers/chromedriver.exe
+Back_End/utils/drivers/chromedriver

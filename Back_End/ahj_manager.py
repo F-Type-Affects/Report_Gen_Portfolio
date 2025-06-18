@@ -3,6 +3,10 @@ import time
 import requests
 import random
 import pandas as pd
+import os
+import platform
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.chrome.options import Options
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
@@ -13,6 +17,35 @@ from .config import get_config
 config = get_config()
 
 logger = logging.getLogger(__name__)
+
+def get_chromedriver_path():
+    """
+    Get the path to ChromeDriver based on the operating system.
+    
+    Returns:
+        str: Path to ChromeDriver executable or None if not found.
+    """
+    # Determine the ChromeDriver filename based on OS
+    system = platform.system()
+    if system == "Windows":
+        driver_name = "chromedriver.exe"
+    else:
+        driver_name = "chromedriver"
+    
+    # Get the path to the drivers directory
+    current_file = os.path.abspath(__file__)
+    back_end_dir = os.path.dirname(current_file)
+    utils_dir = os.path.join(back_end_dir, "utils", "drivers")
+    driver_path = os.path.join(utils_dir, driver_name)
+    
+    # Check if the driver exists
+    if os.path.exists(driver_path):
+        logger.info(f"Found ChromeDriver at: {driver_path}")
+        return driver_path
+    else:
+        logger.warning(f"ChromeDriver not found at: {driver_path}")
+        logger.warning(f"Please place {driver_name} in {utils_dir}")
+        return None
 
 # Initialize web driver for Selenium to search AHJ registry
 def init_driver():
@@ -25,10 +58,31 @@ def init_driver():
     
     chrome_options = webdriver.ChromeOptions()
     chrome_options.add_argument("--headless")
-    chrome_options.add_argument("--start-fullscreen")
+    # Remove --start-fullscreen and add window size
+    chrome_options.add_argument("--window-size=1920,1080")
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
-    driver = webdriver.Chrome(options=chrome_options)
+    
+    # Add these options from base_scraper.py
+    chrome_options.add_argument('--disable-gpu')
+    chrome_options.add_argument('--disable-blink-features=AutomationControlled')
+    chrome_options.add_experimental_option("useAutomationExtension", False)
+    chrome_options.add_experimental_option('excludeSwitches', ['enable-logging'])
+    chrome_options.add_argument('--log-level=3')
+    
+    # Get ChromeDriver path
+    chromedriver_path = get_chromedriver_path()
+    
+    if chromedriver_path:
+        # Use the ChromeDriver from our drivers directory
+        service = Service(chromedriver_path)
+        driver = webdriver.Chrome(service=service, options=chrome_options)
+        logger.info("Chrome driver initialized using project ChromeDriver")
+    else:
+        # Fallback to system ChromeDriver
+        driver = webdriver.Chrome(options=chrome_options)
+        logger.info("Chrome driver initialized using system ChromeDriver")
+    
     return driver
 
 # Function to search AHJ registry

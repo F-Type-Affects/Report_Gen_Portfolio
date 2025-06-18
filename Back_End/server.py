@@ -302,7 +302,7 @@ def generate_ahj_report():
                 ahj_name = ahj_data[0].get('AHJ Name')
                 if ahj_name:
                     state = project.state
-                    query = f"{ahj_name}, {state} building code amendments filetype:pdf"
+                    query = f"{ahj_name}, {state} building code amendments"
                     pdf_links, web_links = perform_bing_search(query, retries=5)
                     amendments["pdf_links"] = pdf_links
                     amendments["web_links"] = web_links
@@ -1149,4 +1149,4 @@ def exit_app():
 # entry point
 if __name__ == '__main__':
     # Launch the Flask app
-    app.run(host='127.0.0.1', port=8000, debug=True)
+    app.run(host='127.0.0.1', port=8888, debug=True)
