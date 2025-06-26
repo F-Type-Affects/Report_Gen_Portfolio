@@ -3,11 +3,13 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import Select, WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException, ElementClickInterceptedException, StaleElementReferenceException
+from selenium.webdriver.chrome.service import Service  # Added import for Service
 import time
 import os
 import logging
 import traceback
 import shutil
+import platform  # Added import for platform detection
 from dataclasses import dataclass
 from typing import Dict, Tuple, Optional, List
 
@@ -20,6 +22,33 @@ class ASCEReportConfig:
     """Configuration for ASCE Report download functionality"""
     download_directory: str  # Temporary directory for downloads
     wait_time: int = 60  # Time to wait for download to complete
+
+
+def get_chromedriver_path():
+    """
+    Get the path to ChromeDriver based on the operating system.
+    
+    Returns:
+        str: Path to ChromeDriver executable or None if not found.
+    """
+    # Determine the ChromeDriver filename based on OS
+    system = platform.system()
+    if system == "Windows":
+        driver_name = "chromedriver.exe"
+    else:
+        driver_name = "chromedriver"
+    
+    # Get the path to the drivers directory
+    current_file = os.path.abspath(__file__)
+    back_end_dir = os.path.dirname(current_file)
+    utils_dir = os.path.join(back_end_dir, "utils", "drivers")
+    driver_path = os.path.join(utils_dir, driver_name)
+    
+    # Check if the driver exists
+    if os.path.exists(driver_path):
+        return driver_path
+    else:
+        return None
 
 
 class ASCEReportScraper:
@@ -71,13 +100,38 @@ class ASCEReportScraper:
             }
             options.add_experimental_option("prefs", prefs)
             
+            # Updated Chrome options to match ahj_manager.py
             options.add_argument('--no-sandbox')
             options.add_argument('--headless')
             options.add_argument('--disable-dev-shm-usage')
             options.add_argument(f'--user-data-dir={self.temp_dir}')
             
-            self.driver = webdriver.Chrome(options=options)
-            self.driver.maximize_window()
+            # Replace maximize_window with window size setting
+            options.add_argument("--window-size=1920,1080")
+            
+            # Add additional options from ahj_manager.py for better stability
+            options.add_argument('--disable-gpu')
+            options.add_argument('--disable-blink-features=AutomationControlled')
+            options.add_experimental_option("useAutomationExtension", False)
+            options.add_experimental_option('excludeSwitches', ['enable-logging'])
+            options.add_argument('--log-level=3')
+            
+            # Get ChromeDriver path
+            chromedriver_path = get_chromedriver_path()
+            
+            if chromedriver_path:
+                # Use the ChromeDriver from our drivers directory
+                service = Service(chromedriver_path)
+                self.driver = webdriver.Chrome(service=service, options=options)
+                self.logger.info("Chrome driver initialized using project ChromeDriver")
+            else:
+                # Fallback to system ChromeDriver
+                self.driver = webdriver.Chrome(options=options)
+                self.logger.info("Chrome driver initialized using system ChromeDriver")
+            
+            # Remove the maximize_window() call since we're using --window-size argument
+            # self.driver.maximize_window()  # This line has been removed
+            
             self.logger.info("WebDriver initialized successfully")
             return True
         except Exception as e:
@@ -86,7 +140,7 @@ class ASCEReportScraper:
                 shutil.rmtree(self.temp_dir, ignore_errors=True)
             return False
 
-
+    # Rest of the class methods remain unchanged...
     def initial_page_load(self, timeout: int = 40) -> Tuple[bool, Dict[str, bool]]:
         """
         Optimized initial page load detection that checks essential elements.
