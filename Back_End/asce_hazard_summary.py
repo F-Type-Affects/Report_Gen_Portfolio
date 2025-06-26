@@ -3,14 +3,43 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import Select, WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException, ElementClickInterceptedException
+from selenium.webdriver.chrome.service import Service  # Added import for Service
 import time
 import logging
+import platform  # Added import for platform detection
 from dataclasses import dataclass
 from .asce_config import ASCEToolConfig
 from .models import ASCESummaryData
 from typing import Dict, Tuple, Optional
 import os
 import openpyxl
+
+
+def get_chromedriver_path():
+    """
+    Get the path to ChromeDriver based on the operating system.
+    
+    Returns:
+        str: Path to ChromeDriver executable or None if not found.
+    """
+    # Determine the ChromeDriver filename based on OS
+    system = platform.system()
+    if system == "Windows":
+        driver_name = "chromedriver.exe"
+    else:
+        driver_name = "chromedriver"
+    
+    # Get the path to the drivers directory
+    current_file = os.path.abspath(__file__)
+    back_end_dir = os.path.dirname(current_file)
+    utils_dir = os.path.join(back_end_dir, "utils", "drivers")
+    driver_path = os.path.join(utils_dir, driver_name)
+    
+    # Check if the driver exists
+    if os.path.exists(driver_path):
+        return driver_path
+    else:
+        return None
 
 
 class ASCEScraper:
@@ -203,26 +232,50 @@ class ASCEScraper:
         """Initialize and configure the Chrome WebDriver"""
         try:
             import tempfile
-            import shutil
             
-            # create unique temp directory for gunicorn workers to use
+            # Create unique temp directory for gunicorn workers to use
             self.temp_dir = tempfile.mkdtemp()
-            
             
             options = webdriver.ChromeOptions()
             options.page_load_strategy = 'normal'
+            
+            # Updated Chrome options to match ahj_manager.py
             options.add_argument('--no-sandbox')
             options.add_argument('--headless')
-            options.add_argument('--no-sandbox')
             options.add_argument('--disable-dev-shm-usage')
             options.add_argument(f'--user-data-dir={self.temp_dir}')
             
-            self.driver = webdriver.Chrome(options=options)
-            self.driver.maximize_window()
+            # Replace maximize_window with window size setting
+            options.add_argument("--window-size=1920,1080")
+            
+            # Add additional options from ahj_manager.py for better stability
+            options.add_argument('--disable-gpu')
+            options.add_argument('--disable-blink-features=AutomationControlled')
+            options.add_experimental_option("useAutomationExtension", False)
+            options.add_experimental_option('excludeSwitches', ['enable-logging'])
+            options.add_argument('--log-level=3')
+            
+            # Get ChromeDriver path
+            chromedriver_path = get_chromedriver_path()
+            
+            if chromedriver_path:
+                # Use the ChromeDriver from our drivers directory
+                service = Service(chromedriver_path)
+                self.driver = webdriver.Chrome(service=service, options=options)
+                self.logger.info("Chrome driver initialized using project ChromeDriver")
+            else:
+                # Fallback to system ChromeDriver
+                self.driver = webdriver.Chrome(options=options)
+                self.logger.info("Chrome driver initialized using system ChromeDriver")
+            
+            # Remove the maximize_window() call since we're using --window-size argument
+            # self.driver.maximize_window()  # This line has been removed
+            
             return True
         except Exception as e:
             if hasattr(self, 'temp_dir'):
-                shutil.rmtree(self.temp_dir,ignore_errors=True)
+                import shutil
+                shutil.rmtree(self.temp_dir, ignore_errors=True)
             self.logger.error(f"Failed to initialize driver: {str(e)}")
             return False
 
@@ -369,21 +422,6 @@ class ASCEScraper:
                 shutil.rmtree(self.temp_dir, ignore_errors=True)
         except Exception as e:
             self.logger.error(f"Error during cleanup: {str(e)}")
-                
-
-    def cleanup(self):
-        """Cleanup resources"""
-        try:
-            if self.driver:
-                self.driver.quit()
-                self.driver = None
-                
-            if hasattr(self, 'temp_dir'):
-                import shutil
-                shutil.rmtree(self.temp_dir, ignore_errors=True)
-        except Exception as e:
-           self.logger.error(f"Error during cleanup: {str(e)}") 
-
 
     def run_scraping_process(self, address: str, standard_version: str, risk_category: str, soil_class: str) -> Tuple[bool, Optional[str], Optional[Dict]]:
         """
