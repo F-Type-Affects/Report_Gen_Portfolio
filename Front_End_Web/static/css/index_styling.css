@@ -7,142 +7,407 @@
 
 /* Body styling: sets font, background color, and layout for the page */
 body {
-    font-family: Arial, sans-serif;  /* Sets the font for the entire document */
-    background-color: white;         /* Sets the background color to white */
-    color: white;                    /* Default text color (white) */
-    display: flex;                   /* Sets flexbox layout */
-    flex-direction: column;          /* Aligns items in a column (stacked vertically) */
-    align-items: center;             /* Centers the items horizontally */
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    background-color: #fafafa;
+    color: #333;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    line-height: 1.6;
+    margin: 0;
+    padding: 0;
 }
 
 /* Styling for the banner in the header section */
+header {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    padding: 10px 10px 10px 10px;
+}
+
 header .banner {
-    width: 100%;                     /* Makes the banner span the full width of the page */
-    height: 200px;                   /* Fixed height for the banner */
-    object-fit: cover;               /* Ensures the image fits without distortion */
-    display: block;                  /* Ensures the element is displayed as a block-level element */
-    margin-top: 10px;                /* Adds 10px space between the top of the page and the banner */
+    width: 100%;
+    max-width: 2000px;
+    height: 250px;
+    object-fit: contain;
+    display: block;
+    margin: 5px 5px 5px 5px;
+    border-radius: 0 0 15px 15px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
 }
 
 /* Container styling: contains the sidebar and content section */
 .container {
-    display: flex;                   /* Uses flexbox to layout sidebar and content side-by-side */
-    width: 100%;                     /* Makes the container span the full width of the page */
-    margin-top: 10px;                /* Adds space between the container and the banner */
-    justify-content: space-between;  /* Distributes space evenly between sidebar and content */
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-width: 2000px;
+    margin: 10px auto 0;
+    gap: 20px;
+    padding: 0 20px;
 }
 
 /* Sidebar styling: contains buttons aligned vertically */
 .sidebar {
-    width: 20%;                      /* Sidebar occupies 20% of the page width */
-    display: flex;                   /* Enables flexbox layout for buttons */
-    flex-direction: column;          /* Aligns the buttons in a vertical column */
-    align-items: center;             /* Centers the buttons horizontally inside the sidebar */
-    margin-right: 70px;              /* Adds space between the sidebar and content */
+    width: 100%;
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    gap: 15px;
+    position: sticky;
+    top: 20px;
+    height: fit-content;
 }
 
 /* Styling for elements with the 'btn' class */
 .btn {
-    width: 90%;
-    margin: 10px 0;
-    padding: 10px;
-    background-color: red;
+    width: 100%;
+    padding: 15px 20px;
+    background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
     color: white;
-    text-decoration: none;           /* Removes underline from links */
-    text-align: center;              /* Centers the text */
+    text-decoration: none;
+    text-align: center;
     border: none;
-    border-radius: 25px;
-    font-size: 1rem;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
     cursor: pointer;
-    transition: background-color 0.3s, color 0.3s;
-    display: inline-block;           /* Ensures proper sizing for <a> elements */
+    transition: all 0.3s ease;
+    display: inline-block;
+    box-shadow: 0 2px 8px rgba(220, 38, 38, 0.2);
+    border: 2px solid transparent;
 }
 
 /* Hover effect for 'btn' class */
 .btn:hover {
-    background-color: white;
-    color: red;
+    background: white;
+    color: #dc2626;
+    border: 2px solid #dc2626;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(220, 38, 38, 0.3);
 }
-
 
 /* Instructions div: the main content area styling */
 #instructions {
-    width: 100%;                     /* The instructions area takes up 100% of the content width */
-    height: 100%;                    /* Fills 100% of the container height */
-    background-color: #000;          /* Sets background color to black */
-    color: #fff;                     /* Sets text color to white */
-    border: 2px solid white;         /* Adds a solid white border */
-    border-radius: 10px;             /* Rounds the corners of the instruction area */
-    padding: 20px;                   /* Adds padding inside the instruction area */
-    font-size: 1.1rem;               /* Sets the font size */
-    line-height: 1.25;                /* Increases line spacing for better readability */
-    font-family: Arial, sans-serif;  /* Ensures consistent font across the page */
-    overflow-y: auto;                /* Adds vertical scroll if content overflows */
-    position: relative;
-    left: -50px;
+    flex: 1;
+    background-color: #ffffff;
+    border-radius: 15px;
+    padding: 40px;
+    font-size: 16px;
+    line-height: 1.7;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    overflow-y: auto;
+    max-height: calc(100vh - 280px);
 }
 
 /* Title (h1) inside the instructions div */
 h1 {
-    font-size: 1.5rem;               /* Larger font size for the title */
-    margin-bottom: 10px;             /* Adds space below the title */
+    font-size: 2.5rem;
+    margin-bottom: 20px;
+    color: #1f2937;
+    font-weight: 700;
+    text-align: center;
 }
 
-/* Paragraph styling: Adds spacing between paragraphs */
-p {
-    margin-bottom: 10px;             /* Adds space below each paragraph */
+/* Intro text styling */
+.intro-text {
+    text-align: center;
+    font-size: 18px;
+    margin-bottom: 40px;
+    padding: 20px;
+    background: #f8fafc;
+    border-radius: 12px;
+    border-left: 4px solid #dc2626;
 }
 
-/* Styling for unordered lists inside the instructions div */
-ul {
-    margin-left: 20px;               /* Adds indentation to the list */
+/* Base feature highlight styling */
+.feature-highlight {
+    display: flex;
+    align-items: flex-start;
+    gap: 20px;
+    padding: 30px;
+    margin: 25px 0;
+    border-radius: 15px;
+    box-shadow: 0 3px 15px rgba(0, 0, 0, 0.08);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    border-left: 5px solid;
 }
 
-/* List item styling */
-ul li {
-    margin-bottom: 10px;             /* Adds space between each list item */
+.feature-highlight:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 25px rgba(0, 0, 0, 0.12);
 }
 
-/* Nested unordered list styling */
-ul ul {
-    margin-left: 20px;               /* Adds further indentation for nested lists */
+/* Feature icon styling */
+.feature-icon {
+    font-size: 3rem;
+    min-width: 80px;
+    text-align: center;
+    padding: 20px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.9);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
 }
 
-/* Styling for nested list items */
-ul ul li {
-    margin-bottom: 5px;              /* Adds space between nested list items */
+/* Feature content styling */
+.feature-content {
+    flex: 1;
 }
 
-/* Content area styling: contains the instruction section */
-.content {
-    width: 75%;                      /* Content takes up 75% of the available space */
-    height: 480px;                   /* Fixed height for the content area */
-    display: flex;                   /* Flexbox layout for content alignment */
-    justify-content: flex-start;     /* Aligns the content to the left */
-    align-items: center;             /* Vertically centers the content */
-    position: relative;              /* Keeps the content in its normal document flow */
-    margin-left: 10px;              /* Shift the content area left (toward the sidebar) */
+.feature-content h2 {
+    font-size: 1.8rem;
+    margin-bottom: 12px;
+    font-weight: 700;
+    color: #1f2937;
+}
+
+.feature-description {
+    font-size: 16px;
+    margin-bottom: 20px;
+    color: #4b5563;
+    line-height: 1.6;
+}
+
+.feature-details h4 {
+    font-size: 1.1rem;
+    margin-bottom: 10px;
+    font-weight: 600;
+    color: #374151;
+}
+
+.feature-details ul {
+    margin: 0 0 15px 20px;
+    color: #4b5563;
+}
+
+.feature-details ul li {
+    margin-bottom: 6px;
+    font-size: 15px;
+}
+
+.feature-note {
+    background: rgba(255, 255, 255, 0.7);
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    margin-top: 15px;
+}
+
+/* Unified Web Scraping Feature - Soft Green */
+.feature-unified {
+    background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+    border-left-color: #059669;
+}
+
+.feature-unified .feature-note {
+    background: rgba(16, 185, 129, 0.1);
+    color: #047857;
+    border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+/* AHJ Report Feature - Soft Orange */
+.feature-ahj {
+    background: linear-gradient(135deg, #fff7ed 0%, #fed7aa 100%);
+    border-left-color: #ea580c;
+}
+
+.feature-ahj .feature-note {
+    background: rgba(234, 88, 12, 0.1);
+    color: #c2410c;
+    border: 1px solid rgba(234, 88, 12, 0.2);
+}
+
+/* ASCE Hazard Reports Feature - Soft Blue */
+.feature-asce {
+    background: linear-gradient(135deg, #eff6ff 0%, #bfdbfe 100%);
+    border-left-color: #2563eb;
+}
+
+.feature-asce .feature-note {
+    background: rgba(37, 99, 235, 0.1);
+    color: #1d4ed8;
+    border: 1px solid rgba(37, 99, 235, 0.2);
+}
+
+/* Soil Survey Reports Feature - Soft Brown */
+.feature-soil {
+    background: linear-gradient(135deg, #fefbf3 0%, #f3e8d0 100%);
+    border-left-color: #a16207;
+}
+
+.feature-soil .feature-note {
+    background: rgba(161, 98, 7, 0.1);
+    color: #92400e;
+    border: 1px solid rgba(161, 98, 7, 0.2);
+}
+
+/* Cover Letter Feature - Neutral */
+.feature-cover {
+    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+    border-left-color: #64748b;
+}
+
+.feature-cover .feature-note {
+    background: rgba(100, 116, 139, 0.1);
+    color: #475569;
+    border: 1px solid rgba(100, 116, 139, 0.2);
+}
+
+/* Getting Started Section */
+.getting-started {
+    margin: 30px 0 40px 0;
+    padding: 30px;
+    background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+    border-radius: 15px;
+    border-left: 5px solid #dc2626;
+}
+
+.getting-started h2 {
+    font-size: 2rem;
+    margin-bottom: 25px;
+    color: #1f2937;
+    text-align: center;
+}
+
+.start-steps {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+}
+
+.step {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 20px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.step-number {
+    width: 50px;
+    height: 50px;
+    background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    font-weight: bold;
+    flex-shrink: 0;
+}
+
+.step-content h3 {
+    font-size: 1.2rem;
+    margin-bottom: 5px;
+    color: #1f2937;
+}
+
+.step-content p {
+    color: #6b7280;
+    font-size: 14px;
 }
 
 /* Flash message styling */
 .flash-message {
-    background-color: #4CAF50; /* Green background to indicate success */
-    color: white; /* White text */
-    padding: 15px; /* Padding around the text */
-    margin-bottom: 20px; /* Space below the message */
-    border-radius: 5px; /* Rounded corners */
-    text-align: center; /* Centered text */
-    font-size: 1.2rem; /* Larger font size for better visibility */
+    background-color: #059669;
+    color: white;
+    padding: 15px 30px;
+    margin-bottom: 20px;
+    border-radius: 12px;
+    text-align: center;
+    font-size: 16px;
+    font-weight: 500;
+    box-shadow: 0 2px 10px rgba(5, 150, 105, 0.2);
 }
 
-/* Optional: make the flash message disappear after a while */
+/* Flash message animation */
 .flash-message {
     position: relative;
-    animation: fadeOut 5s forwards; /* Message fades out after 10 seconds */
+    animation: slideIn 0.5s ease-out, fadeOut 5s 3s forwards;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 @keyframes fadeOut {
     0% { opacity: 1; }
     90% { opacity: 1; }
     100% { opacity: 0; }
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+    .container {
+        flex-direction: column;
+        gap: 20px;
+    }
+    
+    .sidebar {
+        width: 100%;
+        position: static;
+        flex-direction: row;
+        overflow-x: auto;
+        padding-bottom: 10px;
+    }
+    
+    .btn {
+        min-width: 200px;
+        flex-shrink: 0;
+    }
+    
+    #instructions {
+        max-height: none;
+    }
+}
+
+@media (max-width: 768px) {
+    .container {
+        padding: 0 15px;
+    }
+    
+    #instructions {
+        padding: 25px;
+    }
+    
+    h1 {
+        font-size: 2rem;
+    }
+    
+    .feature-highlight {
+        flex-direction: column;
+        text-align: center;
+        gap: 15px;
+    }
+    
+    .feature-icon {
+        align-self: center;
+        min-width: 60px;
+        font-size: 2.5rem;
+        padding: 15px;
+    }
+    
+    .sidebar {
+        flex-direction: column;
+    }
+    
+    .btn {
+        min-width: auto;
+    }
+    
+    .start-steps {
+        grid-template-columns: 1fr;
+    }
 }

@@ -1,148 +1,428 @@
-/* confirm_soil_survey.css */
-
-body {
-    background-color: #f4f4f9;
-    font-family: 'Arial', sans-serif;
-    color: #333;
+/* Universal reset and base styling */
+* {
     margin: 0;
     padding: 0;
+    box-sizing: border-box;
 }
 
-header {
-    background-color: #007ACC;
-    color: white;
-    padding: 15px 0;
-    text-align: center;
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    background-color: #fafafa;
+    color: #333;
+    line-height: 1.6;
+    min-height: 100vh;
 }
 
-header h1 {
-    margin: 0;
-    font-size: 24px;
-}
-
-.container {
+/* Page container */
+.page-container {
+    width: 100%;
     max-width: 800px;
-    margin: 30px auto;
+    margin: 0 auto;
+    padding: 40px 20px;
+    min-height: 100vh;
+}
+
+/* Centered red header */
+.page-header {
+    text-align: center;
+    margin-bottom: 40px;
+}
+
+.page-header h1 {
+    font-size: 2.5rem;
+    color: #dc2626; /* Same red as logo */
+    font-weight: 700;
+    margin-bottom: 10px;
+}
+
+/* Content container */
+.content-container {
+    display: flex;
+    flex-direction: column;
+    gap: 25px;
+}
+
+/* Base card styling */
+.project-info-card,
+.soil-info-card {
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    overflow: hidden;
+}
+
+/* Project info card - blue theme */
+.project-info-card {
+    border: 2px solid #2563eb;
+    box-shadow: 0 4px 20px rgba(37, 99, 235, 0.1);
+}
+
+.project-info-card .card-header {
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+    color: white;
+    padding: 20px 25px;
+    margin: 0;
+}
+
+/* Soil info card - brown theme */
+.soil-info-card {
+    border: 2px solid #a16207;
+    box-shadow: 0 4px 20px rgba(161, 98, 7, 0.1);
+}
+
+.soil-info-card .card-header {
+    background: linear-gradient(135deg, #a16207 0%, #92400e 100%);
+    color: white;
+    padding: 20px 25px;
+    margin: 0;
+}
+
+/* Card headers */
+.card-header h2 {
+    font-size: 1.3rem;
+    font-weight: 600;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* Card content */
+.card-content {
     padding: 25px;
-    background-color: #fff;
-    border-radius: 10px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    background: white;
 }
 
-.project-info {
-    background-color: #f9f9f9;
-    padding: 20px;
-    border-radius: 8px;
-    margin-bottom: 25px;
-    border-left: 4px solid #007ACC;
-}
-
-.project-info h2 {
-    color: #007ACC;
-    margin-top: 0;
+/* Project info detail rows - blue accents */
+.project-info-card .detail-row {
+    display: flex;
+    flex-direction: column;
     margin-bottom: 15px;
-    font-size: 20px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid rgba(37, 99, 235, 0.1);
 }
 
-.project-info p {
-    margin: 8px 0;
-    line-height: 1.5;
+.project-info-card .detail-row:last-child {
+    margin-bottom: 0;
+    border-bottom: none;
 }
 
-.confirm-action {
-    background-color: #f1f1f1;
-    padding: 20px;
+.project-info-card .label {
+    font-weight: 600;
+    color: #2563eb;
+    font-size: 14px;
+    margin-bottom: 5px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.project-info-card .value {
+    color: #1f2937;
+    font-size: 15px;
+    word-wrap: break-word;
+}
+
+/* Soil survey content styling */
+.survey-description {
+    font-size: 16px;
+    color: #4b5563;
+    margin-bottom: 15px;
+}
+
+.report-list {
+    list-style: none;
+    padding: 0;
+    margin: 20px 0;
+}
+
+.report-list li {
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(161, 98, 7, 0.1);
+    font-size: 16px;
+    color: #374151;
+    position: relative;
+    padding-left: 20px;
+}
+
+.report-list li:before {
+    content: "🌍";
+    position: absolute;
+    left: 0;
+    top: 10px;
+}
+
+.report-list li:last-child {
+    border-bottom: none;
+}
+
+.process-note {
+    font-size: 14px;
+    color: #92400e;
+    font-style: italic;
+    margin-top: 15px;
+    padding: 15px;
+    background: rgba(161, 98, 7, 0.1);
     border-radius: 8px;
-    margin-bottom: 25px;
-    border-left: 4px solid #28a745;
+    border-left: 4px solid #a16207;
 }
 
-.confirm-action p {
-    margin: 10px 0;
-    line-height: 1.5;
-}
-
-.confirm-action ul {
-    margin: 15px 0;
-    padding-left: 25px;
-}
-
-.confirm-action li {
-    margin-bottom: 8px;
-}
-
-.button-group {
+/* Action section */
+.action-section {
     display: flex;
     justify-content: center;
-    gap: 15px;
-    margin-top: 25px;
+    margin-top: 20px;
 }
 
+.confirm-form {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+}
+
+/* Button styling */
 .btn {
-    padding: 12px 25px;
-    font-size: 16px;
+    padding: 15px 30px;
     border: none;
-    border-radius: 5px;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 600;
     cursor: pointer;
-    transition: background-color 0.3s ease;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    border: 2px solid transparent;
 }
 
-.btn[type="submit"] {
-    background-color: #28a745;
+/* Brown primary button (Generate Reports) */
+.btn-primary {
+    background: linear-gradient(135deg, #a16207 0%, #92400e 100%);
     color: white;
+    box-shadow: 0 4px 15px rgba(161, 98, 7, 0.3);
 }
 
-.btn[type="submit"]:hover {
-    background-color: #218838;
+.btn-primary:hover {
+    background: white;
+    color: #a16207;
+    border: 2px solid #a16207;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(161, 98, 7, 0.4);
 }
 
-.back-btn {
-    background-color: #6c757d;
+/* Secondary button (Cancel) */
+.btn-secondary {
+    background: #6b7280;
     color: white;
+    box-shadow: 0 2px 8px rgba(107, 114, 128, 0.2);
 }
 
-.back-btn:hover {
-    background-color: #5a6268;
+.btn-secondary:hover {
+    background: white;
+    color: #6b7280;
+    border: 2px solid #6b7280;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(107, 114, 128, 0.3);
 }
 
-#loading-spinner {
+/* Flash message styling */
+.flash-message {
+    background-color: #a16207;
+    color: white;
+    padding: 15px 30px;
+    margin-bottom: 20px;
+    border-radius: 12px;
     text-align: center;
-    margin-top: 30px;
+    font-size: 16px;
+    font-weight: 500;
+    box-shadow: 0 2px 10px rgba(161, 98, 7, 0.2);
 }
 
-#loading-spinner p {
-    margin-bottom: 15px;
+/* Responsive design */
+@media (max-width: 768px) {
+    .page-container {
+        padding: 20px 15px;
+    }
+    
+    .page-header h1 {
+        font-size: 2rem;
+    }
+    
+    .card-header {
+        padding: 18px 20px;
+    }
+    
+    .card-header h2 {
+        font-size: 1.1rem;
+    }
+    
+    .card-content {
+        padding: 20px;
+    }
+    
+    .confirm-form {
+        flex-direction: column;
+        gap: 15px;
+        width: 100%;
+    }
+    
+    .btn {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+@media (max-width: 480px) {
+    .page-header h1 {
+        font-size: 1.75rem;
+    }
+    
+    .card-header {
+        padding: 15px 18px;
+    }
+    
+    .card-content {
+        padding: 18px;
+    }
+    
+    .btn {
+        padding: 14px 25px;
+        font-size: 15px;
+    }
+}
+
+<style>
+/* Single step progress styles */
+.single-progress {
+    margin-top: 20px;
+    padding: 25px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    max-width: 400px;
+    width: 100%;
+}
+
+.progress-bar {
+    width: 100%;
+    height: 20px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 25px;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #059669, #047857);
+    width: 0%;
+    transition: width 0.5s ease-in-out;
+    border-radius: 10px;
+}
+
+.progress-step {
+    text-align: center;
+    padding: 20px;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    background: rgba(255, 255, 255, 0.1);
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    margin-bottom: 20px;
+}
+
+.progress-step.active {
+    background: rgba(59, 130, 246, 0.3);
+    border-color: #3b82f6;
+    transform: scale(1.05);
+}
+
+.progress-step.completed {
+    background: rgba(34, 197, 94, 0.3);
+    border-color: #22c55e;
+}
+
+.progress-step.error {
+    background: rgba(239, 68, 68, 0.3);
+    border-color: #ef4444;
+}
+
+.step-icon {
+    font-size: 3em;
+    margin-bottom: 10px;
+}
+
+.step-label {
+    font-weight: 600;
+    margin-bottom: 8px;
+    font-size: 1.1em;
+}
+
+.step-status {
+    font-size: 2em;
+}
+
+.progress-step.error .step-status {
+    color: #ef4444;
+}
+
+.progress-step.completed .step-status {
+    color: #22c55e;
+}
+
+.progress-step.active .step-status {
+    color: #3b82f6;
+    animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+.progress-note {
+    text-align: center;
+    font-style: italic;
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 0.9em;
+    background: rgba(255, 255, 255, 0.1);
+    padding: 15px;
+    border-radius: 5px;
+    border-left: 4px solid #fbbf24;
+}
+
+/* Loading overlay styles (reuse from unified) */
+#loading-indicator {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    color: white;
+}
+
+#loading-text {
     font-size: 18px;
-    color: #007ACC;
+    margin-bottom: 20px;
+    transition: color 0.3s ease;
 }
 
 .spinner {
-    border: 16px solid #f3f3f3;
-    border-top: 16px solid #007ACC;
+    border: 4px solid rgba(255, 255, 255, 0.3);
+    border-top: 4px solid #ffffff;
     border-radius: 50%;
-    width: 80px;
-    height: 80px;
-    animation: spin 2s linear infinite;
-    margin: 0 auto;
+    width: 40px;
+    height: 40px;
+    animation: spin 1s linear infinite;
+    margin: 20px auto;
 }
 
 @keyframes spin {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
 }
-
-@media (max-width: 768px) {
-    .container {
-        max-width: 95%;
-        padding: 15px;
-    }
-    
-    .button-group {
-        flex-direction: column;
-    }
-    
-    .btn {
-        width: 100%;
-        margin-bottom: 10px;
-    }
-}
+</style>

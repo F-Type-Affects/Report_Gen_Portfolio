@@ -1,6 +1,7 @@
 # Flask imports
-from flask import Flask, redirect, request, session, jsonify, render_template, url_for, flash
+from flask import Flask, redirect, request, session, jsonify, render_template, url_for, flash, Response, stream_template
 from flask_session import Session
+from threading import Thread
 
 # General Imports
 import logging
@@ -10,6 +11,9 @@ from redis import Redis
 import requests
 import shutil
 import tempfile
+import time
+import json
+import uuid
 
 # Module imports
 from .auth import get_authorization_url, exchange_code_for_token, decode_id_token, get_user_info
@@ -47,6 +51,131 @@ DATABASE_PATH = config.DATABASE_PATH
 setup_database(DATABASE_PATH)
 
 logger = logging.getLogger(__name__)
+
+# Global dictionary to store progress for each session
+progress_tracker = {}
+
+# track the progress of generating all the reports at once
+# can also track progress of individual reports
+class ProgressTracker:
+    """Thread-safe progress tracker for long-running operations"""
+    
+    def __init__(self, session_id):
+        self.session_id = session_id
+        self.reset()
+    
+    def reset(self):
+        """Reset progress to initial state"""
+        progress_tracker[self.session_id] = {
+            'overall_progress': 0,
+            'current_step': 0,
+            'steps': [
+                {'name': 'ASCE Full Report', 'status': 'pending', 'progress': 0},
+                {'name': 'Soil Survey', 'status': 'pending', 'progress': 0},
+                {'name': 'ASCE Summary', 'status': 'pending', 'progress': 0}
+            ],
+            'status': 'starting',
+            'message': 'Initializing...',
+            'error': None,
+            'completed': False
+        }
+    
+    def update_step(self, step_index, status, progress=None, message=None):
+        """Update a specific step's progress"""
+        if self.session_id not in progress_tracker:
+            return
+            
+        data = progress_tracker[self.session_id]
+        if 0 <= step_index < len(data['steps']):
+            data['steps'][step_index]['status'] = status
+            if progress is not None:
+                data['steps'][step_index]['progress'] = progress
+            
+            # Update current step
+            data['current_step'] = step_index
+            
+            # Calculate overall progress
+            total_progress = sum(step['progress'] for step in data['steps'])
+            data['overall_progress'] = total_progress / 3  # 3 steps total
+            
+            # Update global status and message
+            if message:
+                data['message'] = message
+            
+            if status == 'completed':
+                # Check if all steps are completed
+                if all(step['status'] == 'completed' for step in data['steps']):
+                    data['status'] = 'completed'
+                    data['completed'] = True
+                    data['message'] = 'All reports generated successfully!'
+            elif status == 'error':
+                data['status'] = 'error'
+                data['error'] = message
+    
+    def set_error(self, error_message):
+        """Set error state"""
+        if self.session_id not in progress_tracker:
+            return
+            
+        data = progress_tracker[self.session_id]
+        data['status'] = 'error'
+        data['error'] = error_message
+        data['message'] = f'Error: {error_message}'
+
+class SingleStepProgressTracker:
+    """Simplified progress tracker for single-step operations"""
+    
+    def __init__(self, session_id, step_name):
+        self.session_id = session_id
+        self.step_name = step_name
+        self.reset()
+    
+    def reset(self):
+        """Reset progress to initial state"""
+        progress_tracker[self.session_id] = {
+            'overall_progress': 0,
+            'current_step': 0,
+            'steps': [
+                {'name': self.step_name, 'status': 'pending', 'progress': 0}
+            ],
+            'status': 'starting',
+            'message': 'Initializing...',
+            'error': None,
+            'completed': False
+        }
+    
+    def update_progress(self, progress, message=None, status='in_progress'):
+        """Update progress for the single step"""
+        if self.session_id not in progress_tracker:
+            return
+            
+        data = progress_tracker[self.session_id]
+        data['steps'][0]['status'] = status
+        data['steps'][0]['progress'] = progress
+        data['overall_progress'] = progress
+        
+        if message:
+            data['message'] = message
+        
+        if status == 'completed':
+            data['status'] = 'completed'
+            data['completed'] = True
+            data['message'] = f'{self.step_name} generated successfully!'
+        elif status == 'error':
+            data['status'] = 'error'
+            data['error'] = message
+    
+    def set_error(self, error_message):
+        """Set error state"""
+        if self.session_id not in progress_tracker:
+            return
+            
+        data = progress_tracker[self.session_id]
+        data['status'] = 'error'
+        data['error'] = error_message
+        data['message'] = f'Error: {error_message}'
+        data['steps'][0]['status'] = 'error'
+
 
 """App route to the home page of web application index.html""" 
 @app.route('/')
@@ -514,8 +643,7 @@ This app route handles scraping the ASCE site for the summary table
 def generate_asce_summary():
     """
     App route to generate ASCE Hazard Tool summary and add it to the AHJ Report.
-    Handles both creating new AHJ Reports if needed and updating existing ones.
-    Handle both displaying the options form and processing the scraping request.
+    Updated to use background threading with progress tracking for consistency.
     """
     if request.method == 'GET':
         # Get required session data
@@ -556,190 +684,215 @@ def generate_asce_summary():
             'zip_code': project.zip_code
         }
 
-        # Display the options form with project data
-        return render_template('select_asce_options.html',
+        # Use the shared ASCE template
+        return render_template('asce_individual_options.html',
                              project_data=session['project_data'])
     
+    # Handle POST request with background threading
     try:
-        # Get required session data
-        selected_email = session.get('selected_email')
-        if not selected_email:
-            flash('No email selected. Please select an email first.', 'error')
-            return redirect(url_for('select_user_email_get'))
+        # Generate unique session ID for this operation
+        session_id = str(uuid.uuid4())
+        session['progress_session_id'] = session_id
         
-        # Get project number from session instead of form
-        project_data = session.get('project_data')
-        if not project_data or not project_data.get('code'):
-            flash('Please enter a project number.', 'error')
-            return redirect(url_for('fetch_project_number_get'))
-            
-        project_number = project_data['code']  # Get project number from stored project data
+        # Initialize single-step progress tracker
+        tracker = SingleStepProgressTracker(session_id, 'ASCE Summary')
+        
+        # Validate request
+        validation_result = _validate_individual_asce_request()
+        if validation_result['error']:
+            tracker.set_error(validation_result['message'])
+            flash(validation_result['message'], 'error')
+            return redirect(validation_result['redirect'])
+        
+        # Start background task for ASCE Summary
+        thread = Thread(
+            target=_execute_individual_asce_summary_with_progress,
+            args=(
+                session_id,
+                validation_result['project_data'],
+                validation_result['address'],
+                validation_result['asce_options']
+            )
+        )
+        thread.daemon = True
+        thread.start()
+        
+        # Return page with progress tracking
+        return render_template('asce_individual_options.html',
+                             project_data=validation_result['project_data'],
+                             progress_session_id=session_id,
+                             show_progress=True)
+        
+    except Exception as e:
+        logger.error(f"Critical error in generate_asce_summary: {str(e)}")
+        flash('A critical error occurred during summary generation.', 'error')
+        return redirect(url_for('home'))
 
-        # Check if AHJ Report exists
-        #workbook_exists, result = find_report_workbook(project_number)
-        find_result = find_report_workbook(project_number)
-        logger.info(f"Raw result from find_report_workbook: {find_result}")
-        logger.info(f"Result type: {type(find_result)}")
+
+def _execute_individual_asce_summary_with_progress(session_id, project_data, address, asce_options):
+    """
+    Execute individual ASCE Summary with progress tracking.
+    Note: This runs in a background thread without Flask request context.
+    """
+    tracker = SingleStepProgressTracker(session_id, 'ASCE Summary')
+    project_number = project_data['code']
+    
+    try:
+        # Step 1: Check if AHJ Report exists
+        tracker.update_progress(10, 'Checking AHJ report availability...')
         
-        # Safely unpack the result
+        find_result = find_report_workbook(project_number)
         if isinstance(find_result, tuple) and len(find_result) == 2:
             workbook_exists, result = find_result
-            logger.info(f"Unpacked values: workbook_exists={workbook_exists} ({type(workbook_exists)}), result={result}")
         else:
-            logger.error(f"Unexpected return format from find_report_workbook: {find_result}")
             workbook_exists = False
             result = "Unexpected function return format"
-
         
-        # If workbook doesn't exist, we need to create it first
-        if workbook_exists == False:
+        # If workbook doesn't exist, create it first
+        if not workbook_exists:
             logger.info(f"AHJ Report not found for project {project_number}. Creating new report.")
+            tracker.update_progress(20, 'Creating AHJ report...')
             
-            # Get project and client data
-            project_data = get_project_by_code(project_number, selected_email)
-            if not project_data:
-                flash('Project not found. Please check the Project ID and try again.', 'error')
-                return redirect(url_for('fetch_project_number_get'))
-            
-            # Create Project instance
-            project = Project.from_dict(project_data[0])
-            
-            # Validate project address
-            if not all([project.street1, project.city, project.state, project.zip_code]):
-                flash('Project address is incomplete. Please verify the project has a complete address.', 'error')
-                return redirect(url_for('fetch_project_number_get'))
-
-            # Get client data
-            client_data = get_client_by_id(project.client_id, selected_email)
-            client = Client.from_dict(client_data[0]) if client_data else None
-
-            # Store data in session
-            session['project_data'] = {
-                'code': project_number,
-                'name': project.name,
-                'purchase_order_number': project.purchase_order_number,
-                'billing_contact': project.billing_contact,
-                'street1': project.street1,
-                'street2': project.street2,
-                'city': project.city,
-                'state': project.state,
-                'zip_code': project.zip_code
-            }
-            
-            session['client_data'] = {
-                'client_name': client.name if client else 'N/A',
-                'client_email': client.email if client else 'N/A',
-                'client_phone': client.phone if client else 'N/A',
-                'street1': client.street1 if client else '',
-                'street2': client.street2 if client else '',
-                'city': client.city if client else '',
-                'state': client.state if client else '',
-                'zip_code': client.zip_code if client else ''
-            }
-
-            # Get AHJ data
-            project_address = f"{project.street1}, {project.city}, {project.state}, {project.zip_code}"
-            ahj_data = search_ahj_registry(project_address)
-            
-            # Handle amendments
-            amendments = {"pdf_links": [], "web_links": []}
-            if ahj_data and len(ahj_data) > 0:
-                try:
-                    ahj_name = ahj_data[0].get('AHJ Name')
-                    if ahj_name:
-                        query = f"{ahj_name}, {project.state} building code amendments filetype:pdf"
-                        amendments["pdf_links"], amendments["web_links"] = perform_bing_search(query, retries=5)
-                except Exception as e:
-                    logger.error(f"Error searching amendments: {str(e)}")
-                    flash('Amendment search failed. Continuing without amendments.', 'warning')
-
-            # Store AHJ data
-            session['stored_ahj_data'] = ahj_data or []
-            session['stored_amendment_pdf_links'] = amendments["pdf_links"]
-            session['stored_amendment_web_links'] = amendments["web_links"]
-
-            # Create and save initial workbook
+            # Create a minimal workbook to hold the ASCE summary
             workbook = create_workbook()
-            insert_project_data(workbook.active, session['project_data'])
-            insert_client_data(workbook.active, session['client_data'])
-            insert_ahj_data(workbook.active, ahj_data or [], amendments)
-
-            # Save the workbook and get the path
+            insert_project_data(workbook.active, project_data)
+            
+            # Create minimal client data if not available
+            client_data = {
+                'client_name': 'N/A',
+                'client_email': 'N/A', 
+                'client_phone': 'N/A',
+                'street1': '',
+                'street2': '',
+                'city': '',
+                'state': '',
+                'zip_code': ''
+            }
+            insert_client_data(workbook.active, client_data)
+            
+            # Save the workbook
             workbook_path = save_workbook(workbook, project_number)
             if not workbook_path:
-                flash('Failed to create AHJ Report. Please verify directory permissions.', 'error')
-                logger.error(f"Failed to save workbook for project {project_number}")
-                return redirect(url_for('home'))
-
-            # Check that the workbook exists
-            if not os.path.exists(workbook_path):
-                flash('Workbook was created but file not found. Please check server permissions.', 'error')
-                logger.error(f"Workbook file not found after creation: {workbook_path}")
-                return redirect(url_for('home'))
-
-            logger.info(f"Successfully created workbook at: {workbook_path}")
-        else:
-            logger.info(f"Workbook exists check failed. Value: {workbook_exists}, Result: {result}")
-        # either work book exist or has been created
+                tracker.set_error('Failed to create AHJ Report for ASCE Summary')
+                return
+                
+            logger.info(f"Created minimal AHJ report for ASCE Summary at: {workbook_path}")
         
-        # Initialize scraper
+        # Step 2: Initialize ASCE scraper
+        tracker.update_progress(40, 'Initializing ASCE summary scraper...')
         scraper = ASCEScraper()
         
-        # Get project address from session
-        project_data = session.get('project_data')
-        if not project_data:
-            flash('Project data not found. Please try again.', 'error')
-            return redirect(url_for('home'))
+        try:
+            # Step 3: Execute scraping
+            tracker.update_progress(60, 'Extracting ASCE summary data...')
             
-        address = f"{project_data['street1']}, {project_data['city']}, {project_data['state']}, {project_data['zip_code']}"
-        
-        # Get form data
-        standard_version = request.form.get('standard_version')
-        risk_category = request.form.get('risk_category')
-        soil_class = request.form.get('soil_class')
+            success, error_msg, summary_data = scraper.run_scraping_process(
+                address=address,
+                standard_version=asce_options['standard_version'],
+                risk_category=asce_options['risk_category'],
+                soil_class=asce_options['soil_class']
+            )
+            
+            if not success:
+                tracker.set_error(f'Failed to extract ASCE summary: {error_msg}')
+                return
+            
+            # Step 4: Save summary to workbook
+            tracker.update_progress(80, 'Saving summary to AHJ report...')
+            
+            success, result = update_workbook_with_summary(project_number, summary_data)
+            if not success:
+                tracker.set_error(f'Failed to save summary to workbook: {result}')
+                return
+            
+            # Step 5: Store summary data globally for later retrieval
+            tracker.update_progress(90, 'Preparing summary display...')
+            
+            # Store summary data in Redis or global progress tracker for retrieval
+            # Since we can't access Flask session from background thread
+            summary_dict = {
+                'wind_data': {
+                    'wind_speed': summary_data.wind_data.wind_speed,
+                    'ten_year_mri': summary_data.wind_data.ten_year_mri,
+                    'twenty_five_year_mri': summary_data.wind_data.twenty_five_year_mri,
+                    'fifty_year_mri': summary_data.wind_data.fifty_year_mri,
+                    'hundred_year_mri': summary_data.wind_data.hundred_year_mri,
+                    'unit': summary_data.wind_data.unit
+                },
+                'seismic_data': vars(summary_data.seismic_data),
+                'ice_data': vars(summary_data.ice_data),
+                'snow_data': vars(summary_data.snow_data)
+            }
+            
+            # Store in the progress tracker for retrieval by the display route
+            if session_id in progress_tracker:
+                progress_tracker[session_id]['summary_data'] = summary_dict
+                progress_tracker[session_id]['project_data'] = project_data
+            
+            # Mark as completed
+            tracker.update_progress(100, 'ASCE Summary completed successfully!', 'completed')
+            
+            logger.info(f"ASCE Summary generation completed successfully for project {project_number}")
+            
+        finally:
+            scraper.cleanup()
+            
+    except Exception as e:
+        logger.error(f"Error in individual ASCE summary generation: {str(e)}")
+        tracker.set_error(str(e))
 
-        if not all([standard_version, risk_category, soil_class]):
-            flash('Please select all required ASCE options.', 'error')
-            return redirect(url_for('generate_asce_summary'))
+
+@app.route('/display_asce_summary_results')
+def display_asce_summary_results():
+    """
+    Route to display ASCE summary results after background processing is complete.
+    This retrieves data from the progress tracker since we can't use session from background threads.
+    """
+    try:
+        # Get the progress session ID
+        progress_session_id = session.get('progress_session_id')
+        if not progress_session_id or progress_session_id not in progress_tracker:
+            flash('Summary data not found. Please try generating the summary again.', 'error')
+            return redirect(url_for('home'))
         
-        # Execute scraping
-        success, error_msg, summary_data = scraper.run_scraping_process(
-            address=address,
-            standard_version=standard_version,
-            risk_category=risk_category,
-            soil_class=soil_class
+        # Retrieve data from progress tracker
+        tracker_data = progress_tracker[progress_session_id]
+        summary_dict = tracker_data.get('summary_data')
+        project_data = tracker_data.get('project_data')
+        
+        if not project_data or not summary_dict:
+            flash('Summary data incomplete. Please try generating the summary again.', 'error')
+            return redirect(url_for('home'))
+        
+        # Store in session for the template (now we're back in request context)
+        session['project_data'] = project_data
+        session['summary_data'] = summary_dict
+        
+        # Reconstruct the summary data objects for the template
+        summary_data = ASCESummaryData(
+            wind_data=WindData(**summary_dict['wind_data']),
+            seismic_data=SeismicData(**summary_dict['seismic_data']),
+            ice_data=IceData(**summary_dict['ice_data']),
+            snow_data=SnowData(**summary_dict['snow_data'])
         )
         
-        if not success:
-            flash(f'Failed to scrape ASCE data: {error_msg}', 'error')
-            return redirect(url_for('home'))
-        
-        # Store the summary data in session for the template
-        session['summary_data'] = {
-            'wind_data': {
-                'wind_speed': summary_data.wind_data.wind_speed,
-                'ten_year_mri': summary_data.wind_data.ten_year_mri,
-                'twenty_five_year_mri': summary_data.wind_data.twenty_five_year_mri,
-                'fifty_year_mri': summary_data.wind_data.fifty_year_mri,
-                'hundred_year_mri': summary_data.wind_data.hundred_year_mri,
-                'unit': summary_data.wind_data.unit
-            },
-            'seismic_data': vars(summary_data.seismic_data),
-            'ice_data': vars(summary_data.ice_data),
-            'snow_data': vars(summary_data.snow_data)
-        }
+        # Clean up progress tracker entry (optional)
+        try:
+            del progress_tracker[progress_session_id]
+        except KeyError:
+            pass  # Already cleaned up
         
         # Render the display template
         return render_template('display_summary_details.html',
-                             project_data=session.get('project_data'),
+                             project_data=project_data,
                              summary_data=summary_data,
                              getattr=getattr)
         
     except Exception as e:
-        logger.error(f"Error in generate_asce_summary: {str(e)}")
-        flash('An unexpected error occurred. Please try again.', 'error')
+        logger.error(f"Error displaying ASCE summary results: {str(e)}")
+        flash('An error occurred while displaying the summary results.', 'error')
         return redirect(url_for('home'))
-    
+ 
 """
 This app route saves the extracted summary table to the AHJ report workbook after the results are displayed to the user
 """
@@ -781,12 +934,10 @@ This app route handles scraping the ASCE website for the the full report and sav
 @app.route('/generate_asce_full_report', methods=['GET', 'POST'])
 def generate_asce_full_report():
     """
-    App route to generate and download a full ASCE report PDF.
-    - GET: Display the options form
-    - POST: Process the form and download the report
+    Updated ASCE Full Report route with progress tracking
     """
     if request.method == 'GET':
-        # Get required session data
+        # Existing GET logic (display form)
         selected_email = session.get('selected_email')
         if not selected_email:
             flash('No email selected. Please select an email first.', 'error')
@@ -797,16 +948,13 @@ def generate_asce_full_report():
             flash('Please enter a project number.', 'error')
             return redirect(url_for('fetch_project_number_get'))
             
-        # Get project data
+        # Get and validate project data
         project_data = get_project_by_code(project_number, selected_email)
         if not project_data:
             flash('Project not found. Please check the Project ID and try again.', 'error')
             return redirect(url_for('fetch_project_number_get'))
         
-        # Create Project instance
         project = Project.from_dict(project_data[0])
-        
-        # Validate project address
         if not all([project.street1, project.city, project.state, project.zip_code]):
             flash('Project address is incomplete. Please verify the project has a complete address.', 'error')
             return redirect(url_for('fetch_project_number_get'))
@@ -824,113 +972,48 @@ def generate_asce_full_report():
             'zip_code': project.zip_code
         }
 
-        # Display the options form with project data
-        return render_template('select_asce_options.html',
+        return render_template('asce_individual_options.html',
                              project_data=session['project_data'])
     
-    # Handle POST request
+    # Handle POST request with progress tracking
     try:
-        # Get required session data
-        selected_email = session.get('selected_email')
-        if not selected_email:
-            flash('No email selected. Please select an email first.', 'error')
-            return redirect(url_for('select_user_email_get'))
+        # Generate unique session ID for this operation
+        session_id = str(uuid.uuid4())
+        session['progress_session_id'] = session_id
         
-        # Get project data from session
-        project_data = session.get('project_data')
-        if not project_data or not project_data.get('code'):
-            flash('Project data not found. Please try again.', 'error')
-            return redirect(url_for('fetch_project_number_get'))
-            
-        project_number = project_data['code']
-            
-        # Get project address from session
-        address = f"{project_data['street1']}, {project_data['city']}, {project_data['state']}, {project_data['zip_code']}"
+        # Initialize single-step progress tracker
+        tracker = SingleStepProgressTracker(session_id, 'ASCE Full Report')
         
-        # Get form data
-        standard_version = request.form.get('standard_version')
-        risk_category = request.form.get('risk_category')
-        soil_class = request.form.get('soil_class')
-
-        if not all([standard_version, risk_category, soil_class]):
-            flash('Please select all required ASCE options.', 'error')
-            return redirect(url_for('generate_asce_full_report'))
+        # Validate request
+        validation_result = _validate_individual_asce_request()
+        if validation_result['error']:
+            tracker.set_error(validation_result['message'])
+            flash(validation_result['message'], 'error')
+            return redirect(validation_result['redirect'])
         
-        # Find project directory
-        project_dir = find_project_directory(project_number)
-        if not project_dir:
-            flash(f'Project directory not found for project code: {project_number}', 'error')
-            return redirect(url_for('home'))
-
-        # Create the Project_Info directory if it doesn't exist
-        project_info_dir = os.path.join(project_dir, "Project_Info")
-        if not os.path.exists(project_info_dir):
-            os.makedirs(project_info_dir, exist_ok=True)
-            os.makedirs(os.path.join(project_info_dir, "AHJ_Report"), exist_ok=True)
-            os.makedirs(os.path.join(project_info_dir, "ASCE_Hazard_Report"), exist_ok=True)
-            os.makedirs(os.path.join(project_info_dir, "USDA_Soil_Reports"), exist_ok=True)
-            os.makedirs(os.path.join(project_info_dir, "Archived_AHJ_Reports"), exist_ok=True)
-            logger.info(f"Created Project_Info directory structure for project: {project_number}")
-
-        # Use the ASCE_Hazard_Report directory for both pool and non-pool projects
-        report_dir = os.path.join(project_info_dir, "ASCE_Hazard_Report")
-        if not os.path.exists(report_dir):
-            os.makedirs(report_dir, exist_ok=True)
-            logger.info(f"Created ASCE_Hazard_Report directory: {report_dir}")
-        
-        # Create a unique filename with project ID and timestamp
-        timestamp = time.strftime("%Y%m%d-%H%M%S")
-        filename = f"ASCE_Report_{project_number}_{timestamp}.pdf"
-        destination_path = os.path.join(report_dir, filename)
-        
-        # Initialize the scraper
-        scraper = ASCEReportScraper()
-        
-        try:
-            logger.info(f"Starting ASCE report download for project {project_number}")
-            
-            # Execute scraping
-            success, error_msg, temp_path = scraper.run_report_download(
-                address=address,
-                standard_version=standard_version,
-                risk_category=risk_category,
-                soil_class=soil_class
+        # Start background task
+        thread = Thread(
+            target=_execute_individual_asce_report_with_progress,
+            args=(
+                session_id,
+                validation_result['project_data'],
+                validation_result['address'],
+                validation_result['asce_options']
             )
-            
-            if not success:
-                flash(f'Failed to download ASCE report: {error_msg}', 'error')
-                return redirect(url_for('home'))
-                
-            try:
-                # Verify the directory exists
-                if not os.path.exists(report_dir):
-                    logger.error(f"Required directory does not exist: {report_dir}")
-                    flash(f'The required directory does not exist: {report_dir}. Please contact IT support.', 'error')
-                    return redirect(url_for('home'))
+        )
+        thread.daemon = True
+        thread.start()
         
-                # Copy from temp path to final destination
-                shutil.copy2(temp_path, destination_path)
-                logger.info(f"Report saved to: {destination_path}")
-    
-                # Clean up the temporary file
-                os.remove(temp_path)
-    
-                flash(f'ASCE report successfully generated and saved to: {destination_path}', 'success')
-            except Exception as e:
-                logger.error(f"Error saving report: {str(e)}")
-                flash('Failed to save the report to the project directory.', 'error')
-    
-            return redirect(url_for('home'))
-            
-        finally:
-            # Always perform cleanup to ensure resources are released
-            scraper.cleanup()
+        # Return page with progress tracking
+        return render_template('asce_individual_options.html',
+                             project_data=validation_result['project_data'],
+                             progress_session_id=session_id,
+                             show_progress=True)
         
     except Exception as e:
-        logger.error(f"Error in generate_asce_full_report: {str(e)}")
-        flash('An unexpected error occurred. Please try again.', 'error')
+        logger.error(f"Critical error in generate_asce_full_report: {str(e)}")
+        flash('A critical error occurred during report generation.', 'error')
         return redirect(url_for('home'))
-
 """
 End of ASCE web scraping app routes
 """
@@ -943,12 +1026,10 @@ App route to handle scraping and downloading both USDA Soil Reports:
 @app.route('/generate_soil_survey', methods=['GET', 'POST'])
 def generate_soil_survey():
     """
-    App route to generate and download Web Soil Survey reports (Linear Extensibility and Unified Soil Classification).
-    - GET: Display confirmation page with project data
-    - POST: Process and download the reports
+    Updated Soil Survey route with progress tracking
     """
     if request.method == 'GET':
-        # Get required session data
+        # Existing GET logic (your current implementation)
         selected_email = session.get('selected_email')
         if not selected_email:
             flash('No email selected. Please select an email first.', 'error')
@@ -959,21 +1040,17 @@ def generate_soil_survey():
             flash('Please enter a project number.', 'error')
             return redirect(url_for('fetch_project_number_get'))
             
-        # Get project data
+        # Get and validate project data (your existing logic)
         project_data = get_project_by_code(project_number, selected_email)
         if not project_data:
             flash('Project not found. Please check the Project ID and try again.', 'error')
             return redirect(url_for('fetch_project_number_get'))
         
-        # Create Project instance
         project = Project.from_dict(project_data[0])
-        
-        # Validate project address
         if not all([project.street1, project.city, project.state, project.zip_code]):
             flash('Project address is incomplete. Please verify the project has a complete address.', 'error')
             return redirect(url_for('fetch_project_number_get'))
 
-        # Store data in session
         session['project_data'] = {
             'code': project_number,
             'name': project.name,
@@ -986,147 +1063,756 @@ def generate_soil_survey():
             'zip_code': project.zip_code
         }
 
-        # Display confirmation page with project data
         return render_template('confirm_soil_survey.html',
                              project_data=session['project_data'])
     
-    # Handle POST request
+    # Handle POST request with progress tracking
     try:
-        # Get required session data
+        # Generate unique session ID
+        session_id = str(uuid.uuid4())
+        session['progress_session_id'] = session_id
+        
+        # Initialize single-step progress tracker
+        tracker = SingleStepProgressTracker(session_id, 'USDA Soil Survey')
+        
+        # Validate request
+        validation_result = _validate_individual_soil_request()
+        if validation_result['error']:
+            tracker.set_error(validation_result['message'])
+            flash(validation_result['message'], 'error')
+            return redirect(validation_result['redirect'])
+        
+        # Start background task
+        thread = Thread(
+            target=_execute_individual_soil_survey_with_progress,
+            args=(
+                session_id,
+                validation_result['project_data'],
+                validation_result['address']
+            )
+        )
+        thread.daemon = True
+        thread.start()
+        
+        # Return page with progress tracking
+        return render_template('confirm_soil_survey.html',
+                             project_data=validation_result['project_data'],
+                             progress_session_id=session_id,
+                             show_progress=True)
+        
+    except Exception as e:
+        logger.error(f"Critical error in generate_soil_survey: {str(e)}")
+        flash('A critical error occurred during report generation.', 'error')
+        return redirect(url_for('home'))
+
+"""
+End of USDA Soil Reports App Route
+"""
+
+# ==============================================================================
+# INDIVIDUAL EXECUTION FUNCTIONS WITH PROGRESS
+# ==============================================================================
+
+def _execute_individual_asce_report_with_progress(session_id, project_data, address, asce_options):
+    """Execute individual ASCE report with progress tracking - FIXED"""
+    tracker = SingleStepProgressTracker(session_id, 'ASCE Full Report')
+    project_number = project_data['code']
+    
+    try:
+        # Ensure project directory exists
+        tracker.update_progress(10, 'Setting up project directories...')
+        project_dir = _ensure_project_directory_structure(project_number)
+        if not project_dir:
+            tracker.set_error(f'Failed to create/access project directory for {project_number}')
+            return
+        
+        # Execute ASCE report generation
+        tracker.update_progress(30, 'Starting ASCE report generation...')
+        result = _execute_asce_full_report_with_progress(
+            project_number, address, asce_options, project_dir, tracker, 0
+        )
+        
+        if result['success']:
+            tracker.update_progress(100, 'ASCE Full Report completed successfully!', 'completed')
+        else:
+            tracker.set_error(result['message'])
+            
+    except Exception as e:
+        logger.error(f"Error in individual ASCE report generation: {str(e)}")
+        tracker.set_error(str(e))
+
+def _execute_individual_soil_survey_with_progress(session_id, project_data, address):
+    """Execute individual soil survey with progress tracking - FIXED"""
+    tracker = SingleStepProgressTracker(session_id, 'USDA Soil Survey')
+    project_number = project_data['code']
+    
+    try:
+        # Ensure project directory exists
+        tracker.update_progress(10, 'Setting up project directories...')
+        project_dir = _ensure_project_directory_structure(project_number)
+        if not project_dir:
+            tracker.set_error(f'Failed to create/access project directory for {project_number}')
+            return
+        
+        # Execute soil survey generation
+        tracker.update_progress(30, 'Starting soil survey generation...')
+        result = _execute_soil_survey_with_progress(
+            project_number, address, project_dir, tracker, 0
+        )
+        
+        if result['success']:
+            tracker.update_progress(100, f'Generated {len(result["paths"])} soil reports successfully!', 'completed')
+        else:
+            tracker.set_error(result['message'])
+            
+    except Exception as e:
+        logger.error(f"Error in individual soil survey generation: {str(e)}")
+        tracker.set_error(str(e))
+
+# ==============================================================================
+# VALIDATION FUNCTIONS
+# ==============================================================================
+
+def _validate_individual_asce_request():
+    """Validate ASCE individual request"""
+    try:
+        selected_email = session.get('selected_email')
+        if not selected_email:
+            return {
+                'error': True,
+                'message': 'No email selected. Please select an email first.',
+                'redirect': url_for('select_user_email_get')
+            }
+        
+        project_data = session.get('project_data')
+        if not project_data or not project_data.get('code'):
+            return {
+                'error': True,
+                'message': 'Project data not found. Please try again.',
+                'redirect': url_for('fetch_project_number_get')
+            }
+        
+        # Get ASCE form options from request
+        standard_version = request.form.get('standard_version')
+        risk_category = request.form.get('risk_category')
+        soil_class = request.form.get('soil_class')
+
+        if not all([standard_version, risk_category, soil_class]):
+            return {
+                'error': True,
+                'message': 'Please select all required ASCE options.',
+                'redirect': url_for('generate_asce_full_report')
+            }
+        
+        address = f"{project_data['street1']}, {project_data['city']}, {project_data['state']}, {project_data['zip_code']}"
+        
+        return {
+            'error': False,
+            'project_data': project_data,
+            'address': address,
+            'asce_options': {
+                'standard_version': standard_version,
+                'risk_category': risk_category,
+                'soil_class': soil_class
+            }
+        }
+        
+    except Exception as e:
+        logger.error(f"Error in _validate_individual_asce_request: {str(e)}")
+        return {
+            'error': True,
+            'message': 'Validation error occurred. Please try again.',
+            'redirect': url_for('home')
+        }
+
+def _validate_individual_soil_request():
+    """Validate soil survey individual request"""
+    try:
+        selected_email = session.get('selected_email')
+        if not selected_email:
+            return {
+                'error': True,
+                'message': 'No email selected. Please select an email first.',
+                'redirect': url_for('select_user_email_get')
+            }
+        
+        project_data = session.get('project_data')
+        if not project_data or not project_data.get('code'):
+            return {
+                'error': True,
+                'message': 'Project data not found. Please try again.',
+                'redirect': url_for('fetch_project_number_get')
+            }
+        
+        address = f"{project_data['street1']}, {project_data['city']}, {project_data['state']}, {project_data['zip_code']}"
+        
+        return {
+            'error': False,
+            'project_data': project_data,
+            'address': address
+        }
+        
+    except Exception as e:
+        logger.error(f"Error in _validate_individual_soil_request: {str(e)}")
+        return {
+            'error': True,
+            'message': 'Validation error occurred. Please try again.',
+            'redirect': url_for('home')
+        }
+
+"""
+App route to run all web scraping processes at once
+"""
+"""
+Unified app route to generate all three web scraping reports in sequence:
+1. ASCE Full Report PDF
+2. USDA Soil Reports (Linear Extensibility & Unified Soil Classification)
+3. ASCE Summary Table (saved to AHJ Report)
+
+PREREQUISITE: AHJ Report must exist for the project before running this route.
+"""
+@app.route('/generate_all_reports', methods=['GET', 'POST'])
+def generate_all_reports():
+    """
+    Updated route with real progress tracking
+    """
+    if request.method == 'GET':
+        return _handle_get_request_unified()
+    
+    try:
+        # Generate unique session ID for this operation
+        session_id = str(uuid.uuid4())
+        session['progress_session_id'] = session_id
+        
+        # Initialize progress tracker
+        tracker = ProgressTracker(session_id)
+        
+        # Validate request (your existing validation)
+        validation_result = _validate_unified_request()
+        if validation_result['error']:
+            tracker.set_error(validation_result['message'])
+            flash(validation_result['message'], 'error')
+            return redirect(validation_result['redirect'])
+        
+        # Start background task
+        thread = Thread(
+            target=_execute_unified_scraping_with_progress,
+            args=(
+                session_id,
+                validation_result['project_data'],
+                validation_result['address'],
+                validation_result['asce_options']
+            )
+        )
+        thread.daemon = True
+        thread.start()
+        
+        # Return page with progress tracking
+        return render_template('unified_reports_config.html',
+                             project_data=validation_result['project_data'],
+                             progress_session_id=session_id,
+                             show_progress=True)
+        
+    except Exception as e:
+        logger.error(f"Critical error in generate_all_reports: {str(e)}")
+        flash('A critical error occurred during report generation.', 'error')
+        return redirect(url_for('home'))
+
+def _execute_unified_scraping_with_progress(session_id, project_data, address, asce_options):
+    """
+    Execute all scraping operations with real progress tracking
+    """
+    tracker = ProgressTracker(session_id)
+    project_number = project_data['code']
+    
+    try:
+        # Ensure project directory exists
+        project_dir = _ensure_project_directory_structure(project_number)
+        if not project_dir:
+            tracker.set_error(f'Failed to create/access project directory for {project_number}')
+            return
+        
+        logger.info(f"Starting unified scraping for project {project_number} (Session: {session_id})")
+        
+        # Step 1: ASCE Full Report PDF
+        tracker.update_step(0, 'in_progress', 0, 'Starting ASCE Full Report generation...')
+        result_1 = _execute_asce_full_report_with_progress(
+            project_number, address, asce_options, project_dir, tracker, 0
+        )
+        
+        if not result_1['success']:
+            tracker.set_error(f"ASCE Full Report failed: {result_1['message']}")
+            return
+        
+        tracker.update_step(0, 'completed', 100, 'ASCE Full Report completed successfully')
+        
+        # Step 2: USDA Soil Survey Reports
+        tracker.update_step(1, 'in_progress', 0, 'Starting USDA Soil Survey generation...')
+        result_2 = _execute_soil_survey_with_progress(
+            project_number, address, project_dir, tracker, 1
+        )
+        
+        if not result_2['success']:
+            tracker.set_error(f"Soil Survey failed: {result_2['message']}")
+            return
+            
+        tracker.update_step(1, 'completed', 100, 'Soil Survey reports completed successfully')
+        
+        # Step 3: ASCE Summary Table
+        tracker.update_step(2, 'in_progress', 0, 'Starting ASCE Summary generation...')
+        result_3 = _execute_asce_summary_with_progress(
+            project_number, address, asce_options, tracker, 2
+        )
+        
+        if not result_3['success']:
+            tracker.set_error(f"ASCE Summary failed: {result_3['message']}")
+            return
+            
+        tracker.update_step(2, 'completed', 100, 'ASCE Summary completed successfully')
+        
+        logger.info(f"Completed unified scraping for project {project_number}")
+        
+    except Exception as e:
+        logger.error(f"Error in unified scraping sequence: {str(e)}")
+        tracker.set_error(f"Unexpected error: {str(e)}")
+
+def _execute_asce_full_report_with_progress(project_number, address, asce_options, project_dir, tracker, step_index):
+    """Execute ASCE Full Report with progress updates - FIXED for SingleStepProgressTracker"""
+    try:
+        # Set up file paths
+        report_dir = os.path.join(project_dir, "Project_Info", "ASCE_Hazard_Report")
+        timestamp = time.strftime("%Y%m%d-%H%M%S")
+        filename = f"ASCE_Report_{project_number}_{timestamp}.pdf"
+        destination_path = os.path.join(report_dir, filename)
+        
+        # Initialize scraper
+        if isinstance(tracker, SingleStepProgressTracker):
+            # For individual reports - use update_progress method
+            tracker.update_progress(10, 'Initializing ASCE scraper...')
+        else:
+            # For unified reports - use update_step method
+            tracker.update_step(step_index, 'in_progress', 10, 'Initializing ASCE scraper...')
+        
+        scraper = ASCEReportScraper()
+        
+        try:
+            # Update progress during scraping
+            if isinstance(tracker, SingleStepProgressTracker):
+                tracker.update_progress(30, 'Accessing ASCE website...')
+            else:
+                tracker.update_step(step_index, 'in_progress', 30, 'Accessing ASCE website...')
+            
+            # Execute scraping with progress callbacks
+            success, error_msg, temp_path = scraper.run_report_download(
+                address=address,
+                standard_version=asce_options['standard_version'],
+                risk_category=asce_options['risk_category'],
+                soil_class=asce_options['soil_class']
+            )
+            
+            if not success:
+                return {'success': False, 'message': error_msg, 'path': None}
+            
+            if isinstance(tracker, SingleStepProgressTracker):
+                tracker.update_progress(80, 'Saving ASCE report...')
+            else:
+                tracker.update_step(step_index, 'in_progress', 80, 'Saving ASCE report...')
+            
+            # Copy to final destination
+            shutil.copy2(temp_path, destination_path)
+            os.remove(temp_path)
+            
+            if isinstance(tracker, SingleStepProgressTracker):
+                tracker.update_progress(95, 'ASCE report saved successfully')
+            else:
+                tracker.update_step(step_index, 'in_progress', 95, 'ASCE report saved successfully')
+            
+            logger.info(f"ASCE Full Report saved to: {destination_path}")
+            return {
+                'success': True,
+                'message': 'ASCE Full Report generated successfully',
+                'path': destination_path
+            }
+            
+        finally:
+            scraper.cleanup()
+            
+    except Exception as e:
+        logger.error(f"Error in _execute_asce_full_report_with_progress: {str(e)}")
+        return {'success': False, 'message': str(e), 'path': None}
+
+def _execute_soil_survey_with_progress(project_number, address, project_dir, tracker, step_index):
+    """Execute Soil Survey with progress updates - FIXED for SingleStepProgressTracker"""
+    temp_download_dir = None
+    
+    try:
+        # Set up directories
+        if isinstance(tracker, SingleStepProgressTracker):
+            tracker.update_progress(10, 'Setting up soil survey directories...')
+        else:
+            tracker.update_step(step_index, 'in_progress', 10, 'Setting up soil survey directories...')
+            
+        report_dir = os.path.join(project_dir, "Project_Info", "USDA_Soil_Reports")
+        timestamp = time.strftime("%Y%m%d-%H%M%S")
+        
+        # Create file paths
+        linear_filename = f"Linear_Extensibility_{project_number}_{timestamp}.pdf"
+        soil_class_filename = f"Unified_Soil_Classification_{project_number}_{timestamp}.pdf"
+        
+        linear_path = os.path.join(report_dir, linear_filename)
+        soil_class_path = os.path.join(report_dir, soil_class_filename)
+        
+        # Create temporary directory
+        temp_download_dir = tempfile.mkdtemp()
+        
+        if isinstance(tracker, SingleStepProgressTracker):
+            tracker.update_progress(20, 'Initializing soil survey scraper...')
+        else:
+            tracker.update_step(step_index, 'in_progress', 20, 'Initializing soil survey scraper...')
+        
+        # Initialize scraper
+        config = SoilScraperConfig(download_directory=temp_download_dir, wait_time=90)
+        scraper = WebSoilSurveyScraper(config)
+        
+        try:
+            if isinstance(tracker, SingleStepProgressTracker):
+                tracker.update_progress(40, 'Accessing USDA soil survey website...')
+            else:
+                tracker.update_step(step_index, 'in_progress', 40, 'Accessing USDA soil survey website...')
+            
+            # Execute scraping
+            success, error_msg, temp_paths = scraper.run_soil_survey(address=address)
+            
+            if not success:
+                return {'success': False, 'message': error_msg, 'paths': []}
+            
+            if isinstance(tracker, SingleStepProgressTracker):
+                tracker.update_progress(80, 'Processing soil survey reports...')
+            else:
+                tracker.update_step(step_index, 'in_progress', 80, 'Processing soil survey reports...')
+            
+            # Process downloaded files
+            saved_paths = []
+            
+            if len(temp_paths) >= 1 and os.path.exists(temp_paths[0]):
+                shutil.copy2(temp_paths[0], linear_path)
+                saved_paths.append(linear_path)
+                
+            if len(temp_paths) >= 2 and os.path.exists(temp_paths[1]):
+                shutil.copy2(temp_paths[1], soil_class_path)
+                saved_paths.append(soil_class_path)
+            
+            if isinstance(tracker, SingleStepProgressTracker):
+                tracker.update_progress(95, f'Saved {len(saved_paths)} soil reports')
+            else:
+                tracker.update_step(step_index, 'in_progress', 95, f'Saved {len(saved_paths)} soil reports')
+            
+            return {
+                'success': True,
+                'message': f'Generated {len(saved_paths)} soil reports successfully',
+                'paths': saved_paths
+            }
+            
+        finally:
+            scraper.cleanup()
+            
+    except Exception as e:
+        logger.error(f"Error in _execute_soil_survey_with_progress: {str(e)}")
+        return {'success': False, 'message': str(e), 'paths': []}
+    finally:
+        # Clean up temporary directory
+        if temp_download_dir:
+            try:
+                shutil.rmtree(temp_download_dir, ignore_errors=True)
+            except Exception as e:
+                logger.warning(f"Failed to remove temporary directory: {str(e)}")
+
+def _execute_asce_summary_with_progress(project_number, address, asce_options, tracker, step_index):
+    """Execute ASCE Summary with progress updates - FIXED for SingleStepProgressTracker"""
+    try:
+        if isinstance(tracker, SingleStepProgressTracker):
+            tracker.update_progress(10, 'Checking AHJ report availability...')
+        else:
+            tracker.update_step(step_index, 'in_progress', 10, 'Checking AHJ report availability...')
+        
+        # Check if AHJ Report exists
+        find_result = find_report_workbook(project_number)
+        
+        if isinstance(find_result, tuple) and len(find_result) == 2:
+            workbook_exists, result = find_result
+        else:
+            workbook_exists = False
+        
+        if not workbook_exists:
+            return {
+                'success': False,
+                'message': f'AHJ Report not found for project {project_number}',
+                'data': None
+            }
+        
+        if isinstance(tracker, SingleStepProgressTracker):
+            tracker.update_progress(30, 'Initializing ASCE summary scraper...')
+        else:
+            tracker.update_step(step_index, 'in_progress', 30, 'Initializing ASCE summary scraper...')
+        
+        # Initialize scraper
+        scraper = ASCEScraper()
+        
+        try:
+            if isinstance(tracker, SingleStepProgressTracker):
+                tracker.update_progress(50, 'Extracting ASCE summary data...')
+            else:
+                tracker.update_step(step_index, 'in_progress', 50, 'Extracting ASCE summary data...')
+            
+            # Execute scraping
+            success, error_msg, summary_data = scraper.run_scraping_process(
+                address=address,
+                standard_version=asce_options['standard_version'],
+                risk_category=asce_options['risk_category'],
+                soil_class=asce_options['soil_class']
+            )
+            
+            if not success:
+                return {'success': False, 'message': error_msg, 'data': None}
+            
+            if isinstance(tracker, SingleStepProgressTracker):
+                tracker.update_progress(80, 'Saving summary to AHJ report...')
+            else:
+                tracker.update_step(step_index, 'in_progress', 80, 'Saving summary to AHJ report...')
+            
+            # Save to AHJ report
+            success, result = update_workbook_with_summary(project_number, summary_data)
+            
+            if not success:
+                return {'success': False, 'message': f'Failed to save summary: {result}', 'data': summary_data}
+            
+            if isinstance(tracker, SingleStepProgressTracker):
+                tracker.update_progress(95, 'ASCE summary saved to AHJ report')
+            else:
+                tracker.update_step(step_index, 'in_progress', 95, 'ASCE summary saved to AHJ report')
+            
+            return {
+                'success': True,
+                'message': 'ASCE Summary generated and saved',
+                'data': summary_data
+            }
+            
+        finally:
+            scraper.cleanup()
+            
+    except Exception as e:
+        logger.error(f"Error in _execute_asce_summary_with_progress: {str(e)}")
+        return {'success': False, 'message': str(e), 'data': None}
+
+
+@app.route('/progress/<session_id>')
+def progress_stream(session_id):
+    """
+    Server-Sent Events endpoint for real-time progress updates
+    """
+    def generate_progress():
+        """Generator function for SSE stream"""
+        while True:
+            if session_id in progress_tracker:
+                data = progress_tracker[session_id]
+                yield f"data: {json.dumps(data)}\n\n"
+                
+                # Stop streaming if completed or error
+                if data.get('completed') or data.get('status') == 'error':
+                    break
+            else:
+                # No progress data available
+                yield f"data: {json.dumps({'status': 'no_data'})}\n\n"
+            
+            time.sleep(1)  # Update every second
+    
+    return Response(
+        generate_progress(),
+        mimetype='text/event-stream',
+        headers={
+            'Cache-Control': 'no-cache',
+            'Connection': 'keep-alive',
+            'Access-Control-Allow-Origin': '*'
+        }
+    )
+
+def _handle_get_request_unified():
+    """
+    Handle GET request for unified report generation.
+    Now uses the dedicated unified_reports_config.html template.
+    """
+    try:
+        # Validate user session
         selected_email = session.get('selected_email')
         if not selected_email:
             flash('No email selected. Please select an email first.', 'error')
             return redirect(url_for('select_user_email_get'))
-        
-        # Get project data from session
-        project_data = session.get('project_data')
-        if not project_data or not project_data.get('code'):
-            flash('Project data not found. Please try again.', 'error')
+
+        # Get and validate project number
+        project_number = request.args.get('project_number')
+        if not project_number:
+            flash('Please enter a project number.', 'error')
             return redirect(url_for('fetch_project_number_get'))
             
-        project_number = project_data['code']
-            
-        # Get project address from session
-        address = f"{project_data['street1']}, {project_data['city']}, {project_data['state']}, {project_data['zip_code']}"
+        # Fetch and validate project data
+        project_data = get_project_by_code(project_number, selected_email)
+        if not project_data:
+            flash('Project not found. Please check the Project ID and try again.', 'error')
+            return redirect(url_for('fetch_project_number_get'))
         
-        # Find project directory
-        project_dir = find_project_directory(project_number)
-        if not project_dir:
-            flash(f'Project directory not found for project code: {project_number}', 'error')
-            return redirect(url_for('home'))
+        # Create Project instance and validate address
+        project = Project.from_dict(project_data[0])
+        if not all([project.street1, project.city, project.state, project.zip_code]):
+            flash('Project address is incomplete. All web scraping reports require a complete address.', 'error')
+            return redirect(url_for('fetch_project_number_get'))
 
-        # Create the Project_Info directory if it doesn't exist
-        project_info_dir = os.path.join(project_dir, "Project_Info")
-        if not os.path.exists(project_info_dir):
-            os.makedirs(project_info_dir, exist_ok=True)
-            os.makedirs(os.path.join(project_info_dir, "AHJ_Report"), exist_ok=True)
-            os.makedirs(os.path.join(project_info_dir, "ASCE_Hazard_Report"), exist_ok=True)
-            os.makedirs(os.path.join(project_info_dir, "USDA_Soil_Reports"), exist_ok=True)
-            os.makedirs(os.path.join(project_info_dir, "Archived_AHJ_Reports"), exist_ok=True)
-            logger.info(f"Created Project_Info directory structure for project: {project_number}")
+        # Store project data in session
+        session['project_data'] = {
+            'code': project_number,
+            'name': project.name,
+            'purchase_order_number': project.purchase_order_number,
+            'billing_contact': project.billing_contact,
+            'street1': project.street1,
+            'street2': project.street2,
+            'city': project.city,
+            'state': project.state,
+            'zip_code': project.zip_code
+        }
 
-        # Use the USDA_Soil_Reports directory for the soil survey reports
-        report_dir = os.path.join(project_info_dir, "USDA_Soil_Reports")
-        if not os.path.exists(report_dir):
-            os.makedirs(report_dir, exist_ok=True)
-            logger.info(f"Created USDA_Soil_Reports directory: {report_dir}")
-        
-        # Create timestamp for unique filenames
-        timestamp = time.strftime("%Y%m%d-%H%M%S")
-        
-        # Create unique filenames for the two reports
-        linear_filename = f"Linear_Extensibility_{project_number}_{timestamp}.pdf"
-        soil_class_filename = f"Unified_Soil_Classification_{project_number}_{timestamp}.pdf"
-        
-        # Full paths for the destination files
-        linear_path = os.path.join(report_dir, linear_filename)
-        soil_class_path = os.path.join(report_dir, soil_class_filename)
-        
-        # Create a custom temporary directory for downloads
-        temp_download_dir = tempfile.mkdtemp()
-        logger.info(f"Created temporary download directory: {temp_download_dir}")
-
-        # Initialize the scraper with the custom download directory
-        config = SoilScraperConfig(download_directory=temp_download_dir, wait_time=90)
-        scraper = WebSoilSurveyScraper(config)
-        
-        # After executing scraping
-        success, error_msg, temp_paths = scraper.run_soil_survey(address=address)
-
-        if not success:
-            flash(f'Failed to download USDA soil reports: {error_msg}', 'error')
-            return redirect(url_for('home'))
-
-        try:
-            # Verify the directory exists
-            if not os.path.exists(report_dir):
-                logger.error(f"Required directory does not exist: {report_dir}")
-                flash(f'The required directory does not exist: {report_dir}. Please contact IT support.', 'error')
-                return redirect(url_for('home'))
-
-            # Make sure we have at least one PDF
-            if not temp_paths:
-                flash('No soil reports were downloaded. Please try again.', 'error')
-                return redirect(url_for('home'))
-        
-            # Save downloaded reports based on how many we found
-            if len(temp_paths) >= 1:
-                # First file - Linear Extensibility
-                first_file_path = temp_paths[0]
-                logger.info(f"Linear Extensibility Report Path: {first_file_path}")
-        
-                if os.path.exists(first_file_path) and os.path.getsize(first_file_path) > 0:
-                    # Copy from temp path to final destination
-                    shutil.copy2(first_file_path, linear_path)
-                    logger.info(f"Linear Extensibility report saved to: {linear_path}")
-            
-                    # Clean up the temporary file
-                    try:
-                        os.remove(first_file_path)
-                    except Exception as e:
-                        logger.warning(f"Could not remove temporary file: {str(e)}")
-    
-            if len(temp_paths) >= 2:
-                # Second file - Unified Soil Classification
-                second_file_path = temp_paths[1]
-                logger.info(f"Unified Soil Classification Report Path: {second_file_path}")
-        
-                if os.path.exists(second_file_path) and os.path.getsize(second_file_path) > 0:
-                 # Copy from temp path to final destination
-                    shutil.copy2(second_file_path, soil_class_path)
-                    logger.info(f"Unified Soil Classification report saved to: {soil_class_path}")
-            
-                    # Clean up the temporary file
-                    try:
-                        os.remove(second_file_path)
-                    except Exception as e:
-                        logger.warning(f"Could not remove temporary file: {str(e)}")
-    
-            flash(f'USDA soil reports successfully generated and saved to: {report_dir}', 'success')
-            return redirect(url_for('home'))
-        
-        except Exception as e:
-            logger.error(f"Error saving reports: {str(e)}")
-            flash('Failed to save the reports to the project directory.', 'error')
-            return redirect(url_for('home'))
-            
-        finally:
-            # Always perform cleanup to ensure resources are released
-            scraper.cleanup()
-            
-            # Clean up temp directory
-            try:
-                shutil.rmtree(temp_download_dir, ignore_errors=True)
-                logger.info(f"Removed temporary directory: {temp_download_dir}")
-            except Exception as e:
-                logger.warning(f"Failed to remove temporary directory: {str(e)}")
+        # Use the new dedicated template for unified reports
+        return render_template('unified_reports_config.html',
+                             project_data=session['project_data'])
         
     except Exception as e:
-        logger.error(f"Error in generate_soil_survey: {str(e)}")
-        flash('An unexpected error occurred. Please try again.', 'error')
+        logger.error(f"Error in _handle_get_request_unified: {str(e)}")
+        flash('An error occurred while preparing the report generation form.', 'error')
         return redirect(url_for('home'))
 
-"""End of USDA Soil Reports App Route
+
+def _validate_unified_request():
+    """
+    Validate all required data for unified report generation.
+    
+    Returns:
+        dict: Validation result with error status, message, redirect, and data
+    """
+    try:
+        # Validate user session
+        selected_email = session.get('selected_email')
+        if not selected_email:
+            return {
+                'error': True,
+                'message': 'No email selected. Please select an email first.',
+                'redirect': url_for('select_user_email_get')
+            }
+        
+        # Validate project data in session
+        project_data = session.get('project_data')
+        if not project_data or not project_data.get('code'):
+            return {
+                'error': True,
+                'message': 'Project data not found. Please try again.',
+                'redirect': url_for('fetch_project_number_get')
+            }
+        
+        # Check if AHJ Report exists - REQUIRED for web scraping reports
+        project_number = project_data['code']
+        find_result = find_report_workbook(project_number)
+        
+        if isinstance(find_result, tuple) and len(find_result) == 2:
+            workbook_exists, result = find_result
+        else:
+            logger.error(f"Unexpected return format from find_report_workbook: {find_result}")
+            workbook_exists = False
+            result = "Could not verify AHJ report status"
+        
+        if not workbook_exists:
+            return {
+                'error': True,
+                'message': f'AHJ Report not found for project {project_number}. Please generate the AHJ Report first before running web scraping reports.',
+                'redirect': url_for('fetch_project_number_get')
+            }
+        
+        # Validate ASCE form options
+        standard_version = request.form.get('standard_version')
+        risk_category = request.form.get('risk_category')
+        soil_class = request.form.get('soil_class')
+
+        if not all([standard_version, risk_category, soil_class]):
+            return {
+                'error': True,
+                'message': 'Please select all required ASCE options.',
+                'redirect': url_for('generate_all_reports')
+            }
+        
+        # Construct address string
+        address = f"{project_data['street1']}, {project_data['city']}, {project_data['state']}, {project_data['zip_code']}"
+        
+        return {
+            'error': False,
+            'project_data': project_data,
+            'address': address,
+            'asce_options': {
+                'standard_version': standard_version,
+                'risk_category': risk_category,
+                'soil_class': soil_class
+            }
+        }
+        
+    except Exception as e:
+        logger.error(f"Error in _validate_unified_request: {str(e)}")
+        return {
+            'error': True,
+            'message': 'Validation error occurred. Please try again.',
+            'redirect': url_for('home')
+        }
+
+
+def _ensure_project_directory_structure(project_number):
+    """
+    Ensure all required project directories exist.
+    
+    Args:
+        project_number (str): The project number/code
+        
+    Returns:
+        str: Project directory path if successful, None if failed
+    """
+    try:
+        # Find the main project directory
+        project_dir = find_project_directory(project_number)
+        if not project_dir:
+            logger.error(f'Project directory not found for project code: {project_number}')
+            return None
+
+        # Create the Project_Info directory structure if it doesn't exist
+        project_info_dir = os.path.join(project_dir, "Project_Info")
+        
+        # Define all required subdirectories
+        required_dirs = [
+            project_info_dir,
+            os.path.join(project_info_dir, "AHJ_Report"),
+            os.path.join(project_info_dir, "ASCE_Hazard_Report"),
+            os.path.join(project_info_dir, "USDA_Soil_Reports"),
+            os.path.join(project_info_dir, "Archived_AHJ_Reports")
+        ]
+        
+        # Create all directories
+        for dir_path in required_dirs:
+            if not os.path.exists(dir_path):
+                os.makedirs(dir_path, exist_ok=True)
+                logger.info(f"Created directory: {dir_path}")
+        
+        logger.info(f"Project directory structure verified/created for project: {project_number}")
+        return project_dir
+        
+    except Exception as e:
+        logger.error(f"Error creating project directory structure: {str(e)}")
+        return None
+
+
+"""
+End of app route that runs all web scrapers at once
 """
 
 

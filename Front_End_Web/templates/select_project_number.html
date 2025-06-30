@@ -9,40 +9,110 @@
 </head>
 <body>
     {% include 'flash_message.html' %}
-    <header>
-        <h1>Enter Project Number</h1>
-    </header>
     
-    <div class="container">
-        <form id="projectForm" method="POST">
-            <label for="project_number">Project Number:</label>
-            <input type="text" id="project_number" name="project_number" required>
+    <div class="page-container">
+        <header class="page-header">
+            <h1>Enter Project Number</h1>
+        </header>
+        
+        <div class="main-container">
+            <!-- Left Sidebar - Project Number Input -->
+            <div class="sidebar">
+                <div class="input-section">
+                    <form id="projectForm" method="POST">
+                        <div class="form-group">
+                            <label for="project_number">Project Number:</label>
+                            <input type="text" id="project_number" name="project_number" class="project-input" required>
+                        </div>
+                    </form>
+                </div>
+                
+                <div class="instructions">
+                    <h4>📋 Formatting Instructions</h4>
+                    <p>Leading zeros must be included in the Project ID.</p>
+                    <div class="examples">
+                        <div class="example">ID 1 should be <strong>0001-17</strong> or <strong>24-0001</strong></div>
+                        <div class="example">ID 12 should be <strong>0012-17</strong> or <strong>24-0012</strong></div>
+                        <div class="example">ID 319 should be <strong>0319-17</strong> or <strong>24-0319</strong></div>
+                        <div class="example">ID 1067 should be <strong>1067-17</strong> or <strong>24-1067</strong></div>
+                    </div>
+                </div>
+            </div>
             
-            <div class="instructions">
-                <h4>Formatting Instructions</h4>
-                <p>Padding / Leading zeros must be included in the Project ID.</p>
-                <ul>
-                    <li>ID 1 should be 0001-17 or 24-0001</li>
-                    <li>ID 12 should be 0012-17 or 24-0012</li>
-                    <li>ID 319 should be 0319-17 or 24-0319</li>
-                    <li>ID 1067 should be 1067-17 or 24-1067</li>
-                </ul>
+            <!-- Center Content - Action Buttons -->
+            <div class="content">
+                <div class="button-grid">
+                    <!-- 1. Generate AHJ Report -->
+                    <button type="button" onclick="submitForm('generate_ahj_report')" class="action-btn btn-ahj">
+                        <span class="btn-icon">📋</span>
+                        <span class="btn-text">Generate AHJ Report</span>
+                    </button>
+                    
+                    <!-- 2. Generate All Reports -->
+                    <button type="button" onclick="submitForm('generate_all_reports')" class="action-btn btn-unified">
+                        <span class="btn-icon">🚀</span>
+                        <span class="btn-text">Generate All Reports</span>
+                        <span class="btn-subtitle">(Requires existing AHJ Report)</span>
+                    </button>
+                    
+                    <!-- 3. Generate ASCE Full Report PDF -->
+                    <button type="button" onclick="submitForm('generate_asce_full_report')" class="action-btn btn-asce">
+                        <span class="btn-icon">🔬</span>
+                        <span class="btn-text">Generate ASCE Full Report PDF</span>
+                    </button>
+                    
+                    <!-- 4. Generate ASCE Summary Table -->
+                    <button type="button" onclick="submitForm('generate_asce_summary')" class="action-btn btn-asce">
+                        <span class="btn-icon">🔬</span>
+                        <span class="btn-text">Generate ASCE Summary Table</span>
+                    </button>
+                    
+                    <!-- 5. Generate Soil Reports -->
+                    <button type="button" onclick="submitForm('generate_soil_survey')" class="action-btn btn-soil">
+                        <span class="btn-icon">🌍</span>
+                        <span class="btn-text">Generate Linear Extensibility & Unified Soil Classification Reports</span>
+                    </button>
+                    
+                    <!-- 6. Generate Cover Letter -->
+                    <button type="button" onclick="submitForm('generate_cover_letter')" class="action-btn btn-cover">
+                        <span class="btn-icon">📄</span>
+                        <span class="btn-text">Generate Calculation Cover Letter</span>
+                    </button>
+                    
+                    <!-- 7. Back Button -->
+                    <button type="button" onclick="window.location.href='{{ url_for('select_user_email_get') }}'" class="action-btn btn-back">
+                        <span class="btn-icon">←</span>
+                        <span class="btn-text">Back</span>
+                    </button>
+                </div>
             </div>
-    
-            <div class="button-group">
-                <button type="button" onclick="submitForm('generate_ahj_report')" class="btn">Generate AHJ Report</button>
-                <button type="button" onclick="submitForm('generate_cover_letter')" class="btn">Generate Calculation Cover Letter</button>
-                <button type="button" onclick="submitForm('generate_asce_summary')" class="btn">Generate ASCE Summary Table</button>
-                <button type="button" onclick="submitForm('generate_asce_full_report')" class="btn">Generate ASCE Full Report PDF</button>
-                <button type="button" onclick="submitForm('generate_soil_survey')" class="btn">Generate Linear Extensability & Unified Soil Classification Reports</button>
-                <button type="button" onclick="window.location.href='{{ url_for('select_user_email_get') }}'" class="btn back-btn">Back</button>
+        </div>
+        
+        <!-- Loading Spinner -->
+        <div id="loading-spinner" style="display:none;">
+            <p id="loading-text">Processing request, please wait...</p>
+            <div class="spinner"></div>
+            <div id="progress-info" style="display:none;">
+                <div class="progress-steps">
+                    <div class="progress-step" id="step-1">
+                        <span class="step-number">1</span>
+                        <span class="step-text">ASCE Full Report PDF</span>
+                        <span class="step-status">⏳</span>
+                    </div>
+                    <div class="progress-step" id="step-2">
+                        <span class="step-number">2</span>
+                        <span class="step-text">USDA Soil Survey Reports</span>
+                        <span class="step-status">⏳</span>
+                    </div>
+                    <div class="progress-step" id="step-3">
+                        <span class="step-number">3</span>
+                        <span class="step-text">ASCE Summary Table</span>
+                        <span class="step-status">⏳</span>
+                    </div>
+                </div>
+                <p class="progress-note">This process may take 5-10 minutes. Please do not close the browser.</p>
             </div>
-            
-            <div id="loading-spinner" style="display:none;">
-                <p>Processing request, please wait...</p>
-                <div class="spinner"></div>
-            </div>
-        </form>
+        </div>
     </div>
 
     <script>
@@ -55,29 +125,69 @@
                 return;
             }
 
+            // Handle different form actions
             if (action === 'generate_ahj_report') {
                 form.action = "{{ url_for('generate_ahj_report') }}";
             } else if (action === 'generate_cover_letter') {
                 form.action = "{{ url_for('generate_cover_letter_route') }}";
             } else if (action === 'generate_asce_summary') {
-                // For ASCE summary, we need to use GET method
                 window.location.href = "{{ url_for('generate_asce_summary') }}?project_number=" + projectNumber;
                 return;
             } else if (action === 'generate_asce_full_report') {
-                // For ASCE full report, we also use GET method
                 window.location.href = "{{ url_for('generate_asce_full_report') }}?project_number=" + projectNumber;
                 return;
-            }
-            else if (action === 'generate_soil_survey') {
-                // For soil survey, we also use GET method
+            } else if (action === 'generate_soil_survey') {
                 window.location.href = "{{ url_for('generate_soil_survey') }}?project_number=" + projectNumber;
+                return;
+            } else if (action === 'generate_all_reports') {
+                window.location.href = "{{ url_for('generate_all_reports') }}?project_number=" + projectNumber;
                 return;
             }
             
-            // Show loading spinner
+            // Show appropriate loading message
+            updateLoadingMessage(action);
             document.getElementById('loading-spinner').style.display = 'block';
             
             form.submit();
+        }
+        
+        function updateLoadingMessage(action) {
+            const loadingText = document.getElementById('loading-text');
+            const progressInfo = document.getElementById('progress-info');
+            
+            if (action === 'generate_all_reports') {
+                loadingText.textContent = 'Generating all reports, please wait...';
+                progressInfo.style.display = 'block';
+                simulateProgress();
+            } else {
+                loadingText.textContent = 'Processing request, please wait...';
+                progressInfo.style.display = 'none';
+            }
+        }
+        
+        function simulateProgress() {
+            const steps = ['step-1', 'step-2', 'step-3'];
+            let currentStep = 0;
+            
+            const progressInterval = setInterval(() => {
+                if (currentStep < steps.length) {
+                    const stepElement = document.getElementById(steps[currentStep]);
+                    const statusElement = stepElement.querySelector('.step-status');
+                    
+                    statusElement.textContent = '🔄';
+                    stepElement.classList.add('active');
+                    
+                    setTimeout(() => {
+                        statusElement.textContent = '✅';
+                        stepElement.classList.remove('active');
+                        stepElement.classList.add('completed');
+                    }, Math.random() * 30000 + 60000);
+                    
+                    currentStep++;
+                } else {
+                    clearInterval(progressInterval);
+                }
+            }, 2000);
         }
     </script>
 </body>

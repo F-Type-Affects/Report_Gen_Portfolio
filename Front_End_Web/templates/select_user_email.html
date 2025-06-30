@@ -9,25 +9,32 @@
 </head>
 <body>
     {% include 'flash_message.html' %}
-    <header>
-        <h1>Select Your Email</h1>
-    </header>
     
-    <div class="container">
-        <form action="{{ url_for('select_user_email_post') }}" method="POST">
-            <label for="email">Email:</label>
-            <select id="email" name="email" required>
-                {% for email in emails %}
-                    <option value="{{ email }}">{{ email }}</option>
-                {% endfor %}
-            </select>
+    <div class="page-container">
+        <header class="page-header">
+            <h1>Select Your Email</h1>
+        </header>
+        
+        <div class="container">
+            <form action="{{ url_for('select_user_email_post') }}" method="POST" class="email-form">
+                <div class="form-group">
+                    <label for="email">Email:</label>
+                    <select id="email" name="email" class="email-select" required>
+                        {% for email in emails %}
+                            <option value="{{ email }}">{{ email }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
 
-            <!-- Hidden input to carry the next step's URL -->
-            <input type="hidden" name="next_url" value="{{ next_url }}">
+                <!-- Hidden input to carry the next step's URL -->
+                <input type="hidden" name="next_url" value="{{ next_url }}">
 
-            <button type="submit">Next</button>
-            <button type="button" onclick="window.location.href='/'">Back</button>
-        </form>
+                <div class="button-group">
+                    <button type="submit" class="btn btn-primary">Next</button>
+                    <button type="button" onclick="window.location.href='/'" class="btn btn-secondary">Back</button>
+                </div>
+            </form>
+        </div>
     </div>
 </body>
 </html>

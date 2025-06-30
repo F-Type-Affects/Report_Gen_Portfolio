@@ -12,6 +12,7 @@
     <header>
         <img src="/static/images/landing_banner.jpg" alt="Consulting Structural & Forensic Engineers" class="banner">
     </header>
+    
     <!-- Display Flash Messages -->
     {% with messages = get_flashed_messages() %}
     {% if messages %}
@@ -26,52 +27,138 @@
     <div class="container">
         <nav class="sidebar">
             <a href="{{ url_for('login') }}" class="btn">Login & Authenticate</a>
-            <a href="{{ url_for('select_user_email_get') }}?next=select_project_number" class="btn">Generate Project Reports & Cover Letter</a>
+            <a href="{{ url_for('select_user_email_get') }}?next=select_project_number" class="btn">Generate Project Reports</a>
             <button onclick="exitApp()" class="btn">Clear Session Data</button>
         </nav>
         
-        
         <main class="content">
             <div id="instructions">
-                <h1>SML Project Reporting Application</h1>
-                <p><strong> First Time Users MUST "Login & Authenticate" before doing anything else</strong>.</p>
-                <p> This will add your user credentials to the database and allow you to use the application.</p>
-                <strong> To Create AHJ Report </strong>
-                <ul>
-                    <ol>
-                        <li> Select <strong> Fetch Project Details </strong> to query and return the relevant Project & Client information </li>
+                <h1>SML Project Report Application</h1>
+                <p class="intro-text">
+                    <strong>First Time Users MUST "Login & Authenticate" before doing anything else.</strong><br>
+                    This will add your user credentials to the database and allow you to use the application.<br>
+                    <strong> You only need to do this once </strong>
+                </p>
+
+                <!-- Getting Started Guide -->
+                <div class="getting-started">
+                    <h2>Getting Started</h2>
+                    <div class="start-steps">
+                        <div class="step">
+                            <div class="step-number">1</div>
+                            <div class="step-content">
+                                <h3>Credentials</h3>
+                                <p>Select your email from the dropdown to access information on Core.</p>
+                            </div>
+                        </div>
+                        <div class="step">
+                            <div class="step-number">2</div>
+                            <div class="step-content">
+                                <h3>Select Project</h3>
+                                <p>Enter the relevant project number</p>
+                            </div>
+                        </div>
+                        <div class="step">
+                            <div class="step-number">3</div>
+                            <div class="step-content">
+                                <h3>Generate Reports</h3>
+                                <p> After generating the AHJ report you can either generate all of them at once or generate them individually.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- AHJ Report Feature - Orange -->
+                <div class="feature-highlight feature-ahj">
+                    <div class="feature-icon">📋</div>
+                    <div class="feature-content">
+                        <h2>AHJ Report</h2>
+                        <p class="feature-description">Generate a report that contains the Authority Having Jurisdiction information as well as Project and Client Information for a given project.</p>
+                        <div class="feature-details">
+                            <h4>Process Overview:</h4>
                             <ul>
-                                <li> Select your email from the drop down </li>
-                                <li> Enter the project number taking care to include padding zeros </li>
-                                <li> If the information is correct select <strong> confirm details </strong> </li>
+                                <li>Fetch project and client details from Core</li>
+                                <li>Search AHJ registry for current IBC Code</li>
+                                <li>Identify relevant ammendments via PDF and web link search using Bing</li>
+                                <li>Generate formatted Excel workbook with all data</li>
                             </ul>
-                        <li> Select <strong> Find AHJ & Amendments </strong> to find the AHJ for the project address and possible Amendments </li>
+                            <p class="feature-note"><strong>Output:</strong> Excel workbook saved in the AHJ_Report directory in the project_info directory for the project.</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Unified Web Scraping Feature - Green -->
+                <div class="feature-highlight feature-unified">
+                    <div class="feature-icon">🚀</div>
+                    <div class="feature-content">
+                        <h2>Generate All Web Scraping Reports</h2>
+                        <p class="feature-description">After generating an AHJ Report for a project you can automate generating the ASCE Hazard Report, ASCE Hazard Summary, USDA Soil Linear Extensibility, and the Unified Soil Classification Report all at once or opt to generate the reports individually if you only need a specific one.</p>
+                        <div class="feature-details">
+                            <h4>Reports Generated:</h4>
                             <ul>
-                                <li> Select <strong> Search AHJ </strong> to find the AHJ information for the address </li>
-                                <li> Then select <strong> Search Amendments </strong> to query possible Amendments to the IBC Codes </li>
-                                <li> Finally select <strong> Confirm and Store </strong> to store the data for export </li>
+                                <li>ASCE Hazard Full Report PDF - Wind, Ice, Snow, Seismic.</li>
+                                <li>USDA Soil Linear Extensibility PDF</li>
+                                <li>USDA Soil Unified Soil Classification PDF </<li>
+                                <li>ASCE Hazard Summary Table - Integrated into existing AHJ Report</li>
                             </ul>
-                        <li>Finally select <strong> Export AHJ Report </strong> to export all of the information to an excel workbook </li>
+                            <p class="feature-note"><strong>Prerequisite:</strong> AHJ Report must exist for the project beforehand.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ASCE Hazard Reports Feature - Blue -->
+                <div class="feature-highlight feature-asce">
+                    <div class="feature-icon">🔬</div>
+                    <div class="feature-content">
+                        <h2>ASCE Hazard Tool Reports</h2>
+                        <p class="feature-description">Generate the ASCE Hazard Report PDF or the ASCE Hazard Report Summary Table for a given project.</p>
+                        <div class="feature-details">
+                            <h4>Available Reports:</h4>
                             <ul>
-                                <li> The workbook will be saved in the project directory on the companies J Drive </li>
+                                <li>ASCE Summary Table - Hazard data extracted and added to existing AHJ report</li>
+                                <li>ASCE Full Report PDF - Wind, Snow, Ice, Seismic PDF downloaded to project directory</li>
                             </ul>
-                        </ol>
-                    </ul>
-                <strong> To Generate a Calculation Cover Sheet </strong>
-                <ul>
-                <ol>
-                    <li> Select Generate Cover Letter </li>
-                    <li> Select your email from the drop down </li>
-                        <ul>
-                            <li> This is how your name is added to the report </li>
-                        </ul>
-                    <li> Search the project number </li>
-                    <li> Confirm the details are correct and select Confirm </li>
-                </ol>
-            </ul> 
+                            <p class="feature-note"><strong>Integration:</strong> The report PDF will be saved to ASCE_Hazard_Report in the project_info directory</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Soil Survey Reports Feature - Brown -->
+                <div class="feature-highlight feature-soil">
+                    <div class="feature-icon">🌍</div>
+                    <div class="feature-content">
+                        <h2>USDA Soil Survey Reports</h2>
+                        <p class="feature-description">Generate the Linear Extensibility Report PDF and the Unified Soil Classification Report PDF for a project simultaneously.</p>
+                        <div class="feature-details">
+                            <h4>Generated Reports:</h4>
+                            <ul>
+                                <li>USDA Soil Linear Extensibility Report</li>
+                                <li>USDA Soil Unified Soil Classification Report</li>
+                            </ul>
+                            <p class="feature-note"><strong> Processing Time:</strong> Process takes 2 - 4 minutes</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Cover Letter Feature -->
+                <div class="feature-highlight feature-cover">
+                    <div class="feature-icon">📄</div>
+                    <div class="feature-content">
+                        <h2>Calculation Cover Letter</h2>
+                        <p class="feature-description">Not in production at this time</p>
+                        <div class="feature-details">
+                            <h4>Features:</h4>
+                            <ul>
+                                <li>Will automate generating cover letters for projects</li>
+                            </ul>
+                            <p class="feature-note"><strong>Usage:</strong> Generate various cover letters for different project types and clients</p>
+                        </div>
+                    </div>
+                </div>
             </div>
         </main>
     </div>
+    
     <!-- Close Browser window on exit -->
     <script>
         function exitApp() {

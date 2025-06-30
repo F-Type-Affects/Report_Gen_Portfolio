@@ -1,95 +1,307 @@
-/* Styling for Fetch Project Number Page */
-body {
-    background-color: #f4f4f9;
-    font-family: 'Arial', sans-serif;
-    color: #333;
+/* Universal reset and base styling */
+* {
     margin: 0;
     padding: 0;
+    box-sizing: border-box;
 }
 
-.container {
-    max-width: 600px;
-    margin: 50px auto;
-    padding: 20px;
-    background: #fff;
-    border-radius: 10px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    background-color: #fafafa;
+    color: #333;
+    line-height: 1.6;
+    min-height: 100vh;
 }
 
-h1 {
-    color: #007ACC;
+/* Page container */
+.page-container {
+    width: 100%;
+    max-width: 2000px;
+    margin: 0 auto;
+    padding: 40px 20px;
+    min-height: 100vh;
+}
+
+/* Header styling */
+.page-header {
     text-align: center;
-    font-size: 24px;
+    margin-bottom: 40px;
+    margin-left: 200px;
+}
+
+.page-header h1 {
+    font-size: 2.5rem;
+    color: #dc2626;
+    font-weight: 700;
+}
+
+/* Main container - sidebar and content */
+.main-container {
+    display: flex;
+    gap: 40px;
+    align-items: flex-start;
+}
+
+/* Left Sidebar */
+.sidebar {
+    width: 350px;
+    background: white;
+    border-radius: 15px;
+    padding: 30px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    border: 1px solid #e5e7eb;
+    position: sticky;
+    top: 40px;
+}
+
+/* Input section */
+.input-section {
+    margin-bottom: 30px;
+}
+
+.form-group {
     margin-bottom: 20px;
 }
 
 label {
+    display: block;
     font-size: 16px;
-    color: #333;
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 12px;
 }
 
-input[type="text"] {
+.project-input {
     width: 100%;
-    padding: 10px;
-    margin: 10px 0 20px;
-    font-size: 16px;
-    border: 1px solid #ccc;
-    border-radius: 5px;
-}
-
-.instructions {
-    background-color: #f1f1f1;
     padding: 15px;
-    border-left: 4px solid #007ACC;
-    margin-bottom: 20px;
-    font-size: 14px;
-    color: #555;
-    line-height: 1.5;
+    font-size: 16px;
+    border: 2px solid #d1d5db;
+    border-radius: 8px;
+    background-color: #ffffff;
+    color: #374151;
+    transition: all 0.3s ease;
 }
 
-/* Add to select_project_number.css */
+.project-input:focus {
+    outline: none;
+    border-color: #dc2626;
+    box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+}
 
-.button-group {
+.project-input:hover {
+    border-color: #9ca3af;
+}
+
+/* Instructions section */
+.instructions {
+    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+    padding: 20px;
+    border-radius: 12px;
+    border-left: 4px solid #dc2626;
+}
+
+.instructions h4 {
+    font-size: 16px;
+    font-weight: 600;
+    color: #1f2937;
+    margin-bottom: 12px;
+}
+
+.instructions p {
+    font-size: 14px;
+    color: #4b5563;
+    margin-bottom: 15px;
+}
+
+.examples {
     display: flex;
     flex-direction: column;
-    gap: 10px;
-    margin-top: 20px;
+    gap: 8px;
 }
 
-.btn {
-    width: 100%;
-    padding: 12px;
-    background-color: #007ACC;
-    color: white;
-    font-size: 16px;
+.example {
+    font-size: 13px;
+    color: #6b7280;
+    padding: 8px 12px;
+    background: white;
+    border-radius: 6px;
+    border: 1px solid #e5e7eb;
+}
+
+.example strong {
+    color: #dc2626;
+    font-weight: 600;
+}
+
+/* Content area - buttons */
+.content {
+    flex: 1;
+    background: white;
+    border-radius: 15px;
+    padding: 20px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    border: 1px solid #e5e7eb;
+}
+
+/* Button grid */
+.button-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 25px;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+/* Base button styling */
+.action-btn {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 20px 25px;
     border: none;
-    border-radius: 5px;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: 600;
     cursor: pointer;
-    transition: background-color 0.3s ease;
+    transition: all 0.3s ease;
+    text-align: left;
+    width: 100%;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    border: 2px solid transparent;
 }
 
-.btn:hover {
-    background-color: #005F9E;
+.action-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
 }
 
-/* Modify the existing back-btn class to match our new button styling */
-.btn.back-btn {
-    background-color: #ccc;
-    color: #333;
+.btn-icon {
+    font-size: 1.5rem;
+    flex-shrink: 0;
 }
 
-.btn.back-btn:hover {
-    background-color: #999;
+.btn-text {
+    flex: 1;
+    line-height: 1.4;
+}
+
+.btn-subtitle {
+    display: block;
+    font-size: 13px;
+    font-weight: 400;
+    opacity: 0.8;
+    margin-top: 4px;
+}
+
+/* AHJ Report Button - Orange */
+.btn-ahj {
+    background: linear-gradient(135deg, #fff7ed 0%, #fed7aa 100%);
+    color: #c2410c;
+    border-left: 5px solid #ea580c;
+}
+
+.btn-ahj:hover {
+    background: white;
+    border: 2px solid #ea580c;
+    color: #ea580c;
+}
+
+/* Unified Reports Button - Green */
+.btn-unified {
+    background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+    color: #047857;
+    border-left: 5px solid #059669;
+}
+
+.btn-unified:hover {
+    background: white;
+    border: 2px solid #059669;
+    color: #059669;
+}
+
+/* ASCE Reports Button - Blue */
+.btn-asce {
+    background: linear-gradient(135deg, #eff6ff 0%, #bfdbfe 100%);
+    color: #1d4ed8;
+    border-left: 5px solid #2563eb;
+}
+
+.btn-asce:hover {
+    background: white;
+    border: 2px solid #2563eb;
+    color: #2563eb;
+}
+
+/* Soil Reports Button - Brown */
+.btn-soil {
+    background: linear-gradient(135deg, #fefbf3 0%, #f3e8d0 100%);
+    color: #92400e;
+    border-left: 5px solid #a16207;
+}
+
+.btn-soil:hover {
+    background: white;
+    border: 2px solid #a16207;
+    color: #a16207;
+}
+
+/* Cover Letter Button - Disabled/Inactive */
+.btn-cover {
+    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+    color: #64748b;
+    border-left: 5px solid #94a3b8;
+    opacity: 0.7;
+}
+
+.btn-cover:hover {
+    background: white;
+    border: 2px solid #64748b;
+    color: #64748b;
+    opacity: 1;
+}
+
+/* Back Button - Gray */
+.btn-back {
+    background: #6b7280;
+    color: white;
+    border-left: 5px solid #4b5563;
+}
+
+.btn-back:hover {
+    background: white;
+    border: 2px solid #6b7280;
+    color: #6b7280;
+}
+
+/* Loading spinner */
+#loading-spinner {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    color: white;
+}
+
+#loading-text {
+    font-size: 18px;
+    margin-bottom: 20px;
 }
 
 .spinner {
-    border: 16px solid #f3f3f3;
-    border-top: 16px solid #3498db;
+    border: 4px solid rgba(255, 255, 255, 0.3);
+    border-top: 4px solid #ffffff;
     border-radius: 50%;
-    width: 120px;
-    height: 120px;
-    animation: spin 2s linear infinite;
-    margin: 20px auto;
+    width: 50px;
+    height: 50px;
+    animation: spin 1s linear infinite;
+    margin-bottom: 30px;
 }
 
 @keyframes spin {
@@ -97,8 +309,145 @@ input[type="text"] {
     100% { transform: rotate(360deg); }
 }
 
-#loading-spinner {
+/* Progress tracking */
+.progress-steps {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 20px;
+    max-width: 500px;
+    width: 100%;
+}
+
+.progress-step {
+    display: flex;
+    align-items: center;
+    padding: 12px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    transition: all 0.3s ease;
+}
+
+.progress-step:last-child {
+    border-bottom: none;
+}
+
+.progress-step.active {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    margin: 5px 0;
+    padding: 15px 12px;
+}
+
+.progress-step.completed {
+    background: rgba(34, 197, 94, 0.2);
+    border-radius: 6px;
+    margin: 5px 0;
+    padding: 15px 12px;
+}
+
+.step-number {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    margin-right: 15px;
+    flex-shrink: 0;
+}
+
+.step-text {
+    flex-grow: 1;
+    font-weight: 500;
+}
+
+.step-status {
+    font-size: 1.2em;
+    margin-left: 10px;
+}
+
+.progress-note {
+    margin-top: 15px;
+    font-style: italic;
     text-align: center;
-    font-size: 18px;
-    margin-top: 20px;
+    font-size: 14px;
+    opacity: 0.8;
+}
+
+/* Flash message styling */
+.flash-message {
+    background-color: #059669;
+    color: white;
+    padding: 15px 30px;
+    margin-bottom: 20px;
+    border-radius: 12px;
+    text-align: center;
+    font-size: 16px;
+    font-weight: 500;
+    box-shadow: 0 2px 10px rgba(5, 150, 105, 0.2);
+}
+
+/* Responsive design */
+@media (max-width: 1024px) {
+    .main-container {
+        flex-direction: column;
+        gap: 30px;
+    }
+    
+    .sidebar {
+        width: 100%;
+        position: static;
+    }
+    
+    .content {
+        padding: 30px;
+    }
+}
+
+@media (max-width: 768px) {
+    .page-container {
+        padding: 20px 15px;
+    }
+    
+    .page-header h1 {
+        font-size: 2rem;
+    }
+    
+    .sidebar {
+        padding: 25px;
+    }
+    
+    .content {
+        padding: 25px;
+    }
+    
+    .action-btn {
+        padding: 18px 20px;
+        font-size: 15px;
+    }
+    
+    .btn-icon {
+        font-size: 1.3rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .page-header h1 {
+        font-size: 1.75rem;
+    }
+    
+    .action-btn {
+        padding: 16px 18px;
+        font-size: 14px;
+    }
+    
+    .sidebar {
+        padding: 20px;
+    }
+    
+    .content {
+        padding: 20px;
+    }
 }

@@ -9,75 +9,188 @@
 </head>
 <body>
     {% include 'flash_message.html' %}
-    <div class="container">
-        <h2>Confirm Project Report Details</h2>
+    
+    <div class="page-container">
+        <!-- Centered Title -->
+        <header class="page-header">
+            <h1>Confirm Project Report Details</h1>
+        </header>
+        
+        <!-- Top Row: Project Details, Client Details, AHJ Registry -->
+        <div class="top-section">
+            <!-- Project Details Card -->
+            <div class="info-card project-card">
+                <div class="card-header">
+                    <h2>📋 Project Details</h2>
+                </div>
+                <div class="card-content">
+                    <div class="detail-row">
+                        <span class="label">Project ID:</span>
+                        <span class="value">{{ project.code }}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="label">Project Name:</span>
+                        <span class="value">{{ project.name }}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="label">PO Number:</span>
+                        <span class="value">{{ project.purchase_order_number or 'N/A' }}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="label">Billing Contact:</span>
+                        <span class="value">{{ project.billing_contact or 'N/A' }}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="label">Address:</span>
+                        <span class="value">
+                            {{ project.street1 }}
+                            {% if project.street2 %}, {{ project.street2 }}{% endif %},
+                            {{ project.city }}, {{ project.state }}, {{ project.zip_code }}
+                        </span>
+                    </div>
+                </div>
+            </div>
 
-        <!-- Display Project Details -->
-        <h3>Project Details</h3>
-        <p><strong>Project ID:</strong> {{ project.code }}</p>
-        <p><strong>Project Name:</strong> {{ project.name }}</p>
-        <p><strong>Project PO #:</strong> {{ project.purchase_order_number }}</p>
-        <p><strong>Project Address:</strong> 
-            {{ project.street1 }}, 
-            {% if project.street2 %}
-                {{project.street2}},
-            {% endif %}
-            {{ project.city }}, {{ project.state }}, {{ project.zip_code }}
-        </p>
-        <p><strong>Billing Contact:</strong> {{project.billing_contact or "N/A"}}</p>
+            <!-- Client Details Card -->
+            <div class="info-card client-card">
+                <div class="card-header">
+                    <h2>🏢 Client Details</h2>
+                </div>
+                <div class="card-content">
+                    <div class="detail-row">
+                        <span class="label">Client Name:</span>
+                        <span class="value">{{ client.client_name }}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="label">Email:</span>
+                        <span class="value">{{ client.client_email }}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="label">Phone:</span>
+                        <span class="value">{{ client.client_phone }}</span>
+                    </div>
+                    {% if client.street1 %}
+                    <div class="detail-row">
+                        <span class="label">Address:</span>
+                        <span class="value">
+                            {{ client.street1 }}
+                            {% if client.street2 %}, {{ client.street2 }}{% endif %},
+                            {{ client.city }}, {{ client.state }}, {{ client.zip_code }}
+                        </span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
 
-        <!-- Display Client Details -->
-        <h3>Client Details</h3>
-        <p><strong>Client Name:</strong> {{ client.client_name }}</p>
-        <p><strong>Client Address:</strong> {{ client.street1 }}, {{ client.street2 }}, {{ client.city }}, {{ client.state }}, {{ client.zip_code }}</p>
-        <p><strong>Phone:</strong> {{ client.client_phone }}</p>
-        <p><strong>Email:</strong> {{ client.client_email }}</p>
+            <!-- AHJ Registry Card -->
+            <div class="info-card ahj-card">
+                <div class="card-header">
+                    <h2>🏛️ AHJ Registry</h2>
+                </div>
+                <div class="card-content">
+                    {% if ahj_data and ahj_data|length > 0 %}
+                        {% for ahj in ahj_data %}
+                        <div class="ahj-entry">
+                            <div class="detail-row">
+                                <span class="label">AHJ Name:</span>
+                                <span class="value">{{ ahj.get('AHJ Name', 'N/A') }}</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="label">Building Code:</span>
+                                <span class="value">{{ ahj.get('Building Code', 'N/A') }}</span>
+                            </div>
+                            {% if not loop.last %}
+                            <hr class="ahj-divider">
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="no-data">
+                            <p>No AHJ information available</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
 
-        <!-- Display AHJ Registry Info -->
-        <h3>AHJ Registry</h3>
-        {% for ahj in ahj_data %}
-            <p><strong>AHJ Name:</strong> {{ ahj['AHJ Name'] }}</p>
-            <p><strong>Building Code:</strong> {{ ahj['Building Code'] }}</p>
-        {% endfor %}
+        <!-- Bottom Row: Amendment Links -->
+        <div class="bottom-section">
+            <!-- Amendment PDF Links Card -->
+            <div class="links-card pdf-links-card">
+                <div class="card-header">
+                    <h2>📄 Amendment PDF Links</h2>
+                </div>
+                <div class="card-content">
+                    {% if amendment_pdf_links and amendment_pdf_links|length > 0 %}
+                        <div class="links-container">
+                            {% for link in amendment_pdf_links %}
+                            <div class="link-item">
+                                <a href="{{ link }}" target="_blank" class="pdf-link">
+                                    <span class="link-icon">📄</span>
+                                    <span class="link-text">{{ link.split('/')[-1] if '/' in link else 'PDF Document' }}</span>
+                                    <span class="external-icon">🔗</span>
+                                </a>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="no-data">
+                            <p>No PDF amendment links found</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
 
-        <!-- Display Amendment PDF Links -->
-        <h3>Amendment PDF Links</h3>
-        <ul>
-            {% for pdf_link in amendment_pdf_links %}
-                <li><a href="{{ pdf_link }}" target="_blank">{{ pdf_link }}</a></li>
-            {% endfor %}
-        </ul>
-
-        <!-- Display Amendment Web Links -->
-        <h3>Amendment Web Links</h3>
-        <ul>
-            {% for web_link in amendment_web_links %}
-                <li><a href="{{ web_link }}" target="_blank">{{ web_link }}</a></li>
-            {% endfor %}
-        </ul>
+            <!-- Amendment Web Links Card -->
+            <div class="links-card web-links-card">
+                <div class="card-header">
+                    <h2>🌐 Amendment Web Links</h2>
+                </div>
+                <div class="card-content">
+                    {% if amendment_web_links and amendment_web_links|length > 0 %}
+                        <div class="links-container">
+                            {% for link in amendment_web_links %}
+                            <div class="link-item">
+                                <a href="{{ link }}" target="_blank" class="web-link">
+                                    <span class="link-icon">🌐</span>
+                                    <span class="link-text">{{ link.split('/')[-1] if '/' in link else 'Web Resource' }}</span>
+                                    <span class="external-icon">🔗</span>
+                                </a>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="no-data">
+                            <p>No web amendment links found</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
 
         <!-- Action Buttons -->
-        <div class="button-group">
-            <!-- Home Button -->
-            <button onclick="window.location.href='{{ url_for('home') }}'" class="btn back-btn">Home</button>
-
-            <!-- Save Report Button -->
-            <form method="POST" action="{{ url_for('export_report_post') }}">
-                <button type="submit" class="btn save-btn">Save Report</button>
+        <div class="action-section">
+            <form method="POST" action="{{ url_for('export_report_post') }}" class="export-form">
+                <button type="submit" class="btn btn-primary">
+                    📊 Export Report
+                </button>
+                <button type="button" onclick="window.location.href='{{ url_for('fetch_project_number_get') }}'" class="btn btn-secondary">
+                    ← Back
+                </button>
             </form>
         </div>
-
-        <!-- Loading indicator -->
-        <div id="loading-indicator" style="display:none;">
-            <p>Saving report, please wait...</p>
-        </div>
-
-        <!-- JavaScript to show loading indicator on submit -->
-        <script>
-            document.querySelector('.save-btn').addEventListener('click', function() {
-                document.getElementById('loading-indicator').style.display = 'block';
-            });
-        </script>
     </div>
+
+    <script>
+        // Add any necessary JavaScript functionality here
+        document.addEventListener('DOMContentLoaded', function() {
+            // Smooth scrolling for better UX
+            const cards = document.querySelectorAll('.info-card, .links-card');
+            cards.forEach((card, index) => {
+                card.style.animationDelay = `${index * 0.1}s`;
+                card.classList.add('fade-in');
+            });
+        });
+    </script>
 </body>
 </html>

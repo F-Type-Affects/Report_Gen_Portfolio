@@ -3,96 +3,164 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Confirm Soil Survey Reports</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/confirm_soil_survey.css') }}">
+    <title>ASCE Hazard Tool Options</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/asce_individual_options.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/flash_message.css') }}">
 </head>
 <body>
     {% include 'flash_message.html' %}
     
     <div class="page-container" {% if progress_session_id %}data-progress-session-id="{{ progress_session_id }}"{% endif %}>
-        <!-- Centered Red Title -->
         <header class="page-header">
-            <h1>Confirm Soil Survey Reports</h1>
+            <h1>ASCE Hazard Tool Options</h1>
         </header>
         
-        <div class="content-container">
-            <!-- Project Information Card -->
-            <div class="project-info-card">
-                <div class="card-header">
-                    <h2>📍 Project Information</h2>
-                </div>
-                <div class="card-content">
-                    <div class="detail-row">
-                        <span class="label">Project Number:</span>
-                        <span class="value">{{ project_data.code }}</span>
-                    </div>
-                    <div class="detail-row">
-                        <span class="label">Project Name:</span>
-                        <span class="value">{{ project_data.name }}</span>
-                    </div>
-                    <div class="detail-row">
-                        <span class="label">Project Address:</span>
-                        <span class="value">
-                            {{ project_data.street1 }}
-                            {% if project_data.street2 %}, {{ project_data.street2 }}{% endif %},
-                            {{ project_data.city }}, {{ project_data.state }}, {{ project_data.zip_code }}
-                        </span>
-                    </div>
-                </div>
+        <div class="container">
+            <!-- Project Info Display -->
+            <div class="project-info">
+                <h3>Project Information</h3>
+                <p><strong>Project ID:</strong> {{ project_data.code }}</p>
+                <p><strong>Project Address:</strong> 
+                    {{ project_data.street1 }}, 
+                    {% if project_data.street2 %}
+                        {{ project_data.street2 }},
+                    {% endif %}
+                    {{ project_data.city }}, {{ project_data.state }}, {{ project_data.zip_code }}
+                </p>
             </div>
 
-            <!-- Soil Survey Information Card -->
-            <div class="soil-info-card">
-                <div class="card-header">
-                    <h2>🌍 USDA Soil Survey Reports</h2>
+            <!-- ASCE Configuration Form -->
+            <form id="asceForm" method="POST" action="{{ request.path }}" class="asce-form">
+                <!-- Standards Version Selector -->
+                <div class="form-group">
+                    <label for="standards-selector">ASCE Standard Version:</label>
+                    <select id="standards-selector" name="standard_version" class="form-select" required>
+                        <option value="" disabled selected>Select Standard Version</option>
+                        <option value="7-10">ASCE/SEI 7-10</option>
+                        <option value="7-16">ASCE/SEI 7-16</option>
+                        <option value="7-22">ASCE/SEI 7-22</option>
+                        <option value="41-17">ASCE/SEI 41-17</option>
+                        <option value="41-23">ASCE/SEI 41-23</option>
+                    </select>
                 </div>
-                <div class="card-content">
-                    <p class="survey-description">You are about to generate the following USDA soil reports:</p>
-                    <ul class="report-list">
-                        <li>Linear Extensibility Report</li>
-                        <li>Unified Soil Classification Report</li>
-                    </ul>
-                    <p class="process-note">This process may take several minutes. Please do not close your browser.</p>
-                </div>
-            </div>
 
-            <!-- Action Buttons -->
-            <div class="action-section">
-                <form method="POST" action="{{ request.path }}" class="confirm-form">
-                    <button type="submit" class="btn btn-primary">
-                        🌍 Generate Reports
+                <!-- Risk Category Selector -->
+                <div class="form-group">
+                    <label for="risk-category">Risk Category:</label>
+                    <select id="risk-category" name="risk_category" class="form-select" required>
+                        <option value="" disabled selected>Select Risk Category</option>
+                        <option value="1">I</option>
+                        <option value="2">II</option>
+                        <option value="3">III</option>
+                        <option value="4">IV</option>
+                    </select>
+                </div>
+
+                <!-- Site Soil Class Selector -->
+                <div class="form-group">
+                    <label for="soil-class">Site Soil Class:</label>
+                    <select id="soil-class" name="soil_class" class="form-select" required>
+                        <option value="" disabled selected>Select Site Soil Class</option>
+                        <!-- Options will be populated by JavaScript -->
+                    </select>
+                </div>
+
+                <!-- Button Group -->
+                <div class="button-group">
+                    {% if 'asce_summary' in request.path %}
+                    <!-- ASCE Summary mode -->
+                    <button type="submit" class="btn submit-btn asce-summary-btn">
+                        🔬 Generate ASCE Summary
                     </button>
-                    <button type="button" onclick="window.location.href='{{ url_for('fetch_project_number_get') }}'" class="btn btn-secondary">
-                        Cancel
+                    {% elif 'asce_full_report' in request.path %}
+                    <!-- ASCE Full Report mode -->
+                    <button type="submit" class="btn submit-btn asce-full-btn">
+                        🔬 Generate Full Report PDF
                     </button>
-                </form>
-            </div>
+                    {% else %}
+                    <!-- Default mode: show both options -->
+                    <button type="submit" class="btn submit-btn asce-summary-btn">
+                        🔬 Generate ASCE Summary
+                    </button>
+                    <button type="submit" formaction="{{ url_for('generate_asce_full_report') }}" class="btn submit-btn asce-full-btn">
+                        🔬 Generate Full Report PDF
+                    </button>
+                    {% endif %}
+                    <button type="button" onclick="window.location.href='{{ url_for('fetch_project_number_get') }}'" class="btn back-btn">Back</button>
+                </div>
+            </form>
         </div>
     </div>
 
     <!-- Loading indicator for progress tracking -->
     <div id="loading-indicator" style="display:none;">
-        <p id="loading-text">Generating soil survey reports, please wait...</p>
+        <p id="loading-text">Generating ASCE report, please wait...</p>
         <div class="single-progress">
             <div class="progress-bar">
                 <div class="progress-fill" id="progressFill"></div>
             </div>
             <div class="progress-step" id="step-1">
-                <div class="step-icon">🌍</div>
-                <div class="step-label">USDA Soil Survey</div>
+                <div class="step-icon">🔬</div>
+                <div class="step-label">ASCE Hazard Report</div>
                 <div class="step-status">⏳</div>
             </div>
             <p class="progress-note">
-                Please keep this page open until the reports are complete.
-                The process may take 3-7 minutes depending on server load.
+                Please keep this page open until the report is complete.
+                The process may take 2-5 minutes depending on server load.
             </p>
         </div>
         <div class="spinner"></div>
     </div>
 
-    <!-- Progress tracking JavaScript -->
     <script>
+        // Soil class options for each standard version
+        const soilClassOptions = {
+            '7-10': [
+                { value: '0', text: 'A - Hard Rock' },
+                { value: '1', text: 'B - Rock' },
+                { value: '2', text: 'C - Very Dense Soil and Soft Rock' },
+                { value: '3', text: 'D - Stiff Soil' },
+                { value: '4', text: 'E - Soft Clay Soil' },
+                { value: '5', text: 'F - Site Response Analysis' }
+            ],
+            '7-16': [
+                { value: '0', text: 'A - Hard Rock' },
+                { value: '1', text: 'B - Rock' },
+                { value: '2', text: 'B - Estimated (see Section 11.4.3)' },
+                { value: '3', text: 'C - Very Dense Soil and Soft Rock' },
+                { value: '4', text: 'D - Stiff Soil' },
+                { value: '5', text: 'D - Default (see Section 11.4.3)' },
+                { value: '6', text: 'E - Soft Clay Soil' },
+                { value: '7', text: 'F - Site Response Analysis' }
+            ],
+            '7-22': [
+                { value: '0', text: 'Default' },
+                { value: '1', text: 'A - Hard Rock' },
+                { value: '2', text: 'B - Rock' },
+                { value: '3', text: 'BC' },
+                { value: '4', text: 'C - Very Dense Soil and Soft Rock' },
+                { value: '5', text: 'CD' },
+                { value: '6', text: 'D - Stiff Soil' },
+                { value: '7', text: 'DE' },
+                { value: '8', text: 'E - Soft Clay Soil' }
+            ]
+        };
+
+        // Update soil class options when standard version changes
+        document.getElementById('standards-selector').addEventListener('change', function() {
+            const soilClassSelect = document.getElementById('soil-class');
+            soilClassSelect.innerHTML = '<option value="" disabled selected>Select Site Soil Class</option>';
+            
+            const options = soilClassOptions[this.value] || [];
+            options.forEach(option => {
+                const optElement = document.createElement('option');
+                optElement.value = option.value;
+                optElement.textContent = option.text;
+                soilClassSelect.appendChild(optElement);
+            });
+        });
+
+        // Single Step Progress Tracker Class
         class SingleStepProgressTracker {
             constructor(sessionId, reportType) {
                 this.sessionId = sessionId;
@@ -129,12 +197,12 @@
                     this.handleConnectionError();
                 };
                 
-                // Fallback timeout (shorter for individual reports)
+                // Fallback timeout for individual reports (8 minutes)
                 setTimeout(() => {
                     if (this.isTracking) {
                         this.handleTimeout();
                     }
-                }, 480000); // 8 minutes timeout
+                }, 480000);
             }
 
             updateProgress(data) {
@@ -263,20 +331,26 @@
                     position: fixed;
                     top: 20px;
                     right: 20px;
-                    background: #059669;
+                    background: #2563eb;
                     color: white;
                     padding: 15px 20px;
                     border-radius: 8px;
-                    box-shadow: 0 4px 15px rgba(5, 150, 105, 0.3);
+                    box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3);
                     z-index: 10001;
                     font-weight: 600;
                 `;
                 notification.textContent = `${this.reportType} generated successfully! Redirecting...`;
                 document.body.appendChild(notification);
                 
-                // Redirect to home after showing message
+                // Determine redirect based on report type
                 setTimeout(() => {
-                    window.location.href = '/';
+                    if (this.reportType === 'ASCE Summary' || this.reportType.includes('Summary')) {
+                        // Redirect to summary display page
+                        window.location.href = '/display_asce_summary_results';
+                    } else {
+                        // Redirect to home for other reports
+                        window.location.href = '/';
+                    }
                 }, 3000);
             }
 
@@ -338,17 +412,25 @@
                     loadingIndicator.style.display = 'block';
                 }
                 
+                // Determine report type based on current URL path
+                let reportType = 'ASCE Hazard Report';
+                if (window.location.pathname.includes('asce_summary')) {
+                    reportType = 'ASCE Summary';
+                    // Update the step label for summary
+                    const stepLabel = document.querySelector('.step-label');
+                    if (stepLabel) {
+                        stepLabel.textContent = 'ASCE Summary';
+                    }
+                }
+                
                 // Start progress tracking
-                progressTracker = new SingleStepProgressTracker(sessionId, 'USDA Soil Survey');
+                progressTracker = new SingleStepProgressTracker(sessionId, reportType);
                 progressTracker.startTracking();
             }
 
             // Form submission handling
             const forms = document.querySelectorAll('form');
             forms.forEach(form => {
-                // Skip if it's not a report generation form
-                if (!form.action.includes('asce') && !form.action.includes('soil')) return;
-                
                 form.addEventListener('submit', function(e) {
                     // Show loading indicator
                     const loadingIndicator = document.getElementById('loading-indicator');

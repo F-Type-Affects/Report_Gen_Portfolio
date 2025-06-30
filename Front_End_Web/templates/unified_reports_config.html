@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>All Web Scraping Reports - Configuration</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/unified_reports_config.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/flash_message.css') }}">
+</head>
+<body>
+    {% include 'flash_message.html' %}
+    
+    <div class="page-container" {% if progress_session_id %}data-progress-session-id="{{ progress_session_id }}"{% endif %}>
+        <!-- Centered Title Above Both Columns -->
+        <header class="page-header">
+            <h1>All Project Reports</h1>
+            <h2>ASCE Configuration</h2>
+        </header>
+        
+        <!-- Two-column layout with aligned cards -->
+        <div class="unified-layout">
+            <!-- Left Column - Reports Description -->
+            <div class="left-column">
+                <div class="description-card">
+                    <div class="card-header">
+                        <h3>📋 Reports to be Generated:</h3>
+                    </div>
+                    <div class="card-content">
+                        <ul class="report-list">
+                            <li>🔬 <strong>ASCE Full Report PDF</strong> - Wind, Snow, Ice, & Seismic</li>
+                            <li>🌍 <strong>USDA Soil Survey Reports</strong> - Linear Extensibility & Unified Soil Classification</li>
+                            <li>📊 <strong>ASCE Summary Table</strong> - Hazard data table (saved to existing AHJ Report)</li>
+                        </ul>
+                        
+                        <div class="prerequisite-warning">
+                            <h4>⚠️ Important Prerequisite:</h4>
+                            <p>The <strong>AHJ Report must already exist</strong> before running this process. 
+                            The ASCE Summary Table will be added to your existing AHJ Report.</p>
+                        </div>
+                        
+                        <div class="processing-note">
+                            <h4>⏱️ Processing Time:</h4>
+                            <p>This process typically takes 8 minutes to complete.
+                            Do not close the browser window or tab the process is running in.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Right Column - Project Info and Form -->
+            <div class="right-column">
+                <!-- Project Info Display -->
+                <div class="project-info">
+                    <div class="card-header">
+                        <h3>📍 Project Information</h3>
+                    </div>
+                    <div class="card-content">
+                        <div class="detail-row">
+                            <span class="label">Project ID:</span>
+                            <span class="value">{{ project_data.code }}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="label">Project Address:</span>
+                            <span class="value">
+                                {{ project_data.street1 }}
+                                {% if project_data.street2 %}, {{ project_data.street2 }}{% endif %},
+                                {{ project_data.city }}, {{ project_data.state }}, {{ project_data.zip_code }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ASCE Configuration Form -->
+                <div class="asce-form-container">
+                    <form id="asceForm" method="POST" action="{{ url_for('generate_all_reports') }}" class="asce-form">
+                        <!-- Standards Version Selector -->
+                        <div class="form-group">
+                            <label for="standards-selector">ASCE Standard Version:</label>
+                            <select id="standards-selector" name="standard_version" class="form-select" required>
+                                <option value="" disabled selected>Select Standard Version</option>
+                                <option value="7-10">ASCE/SEI 7-10</option>
+                                <option value="7-16">ASCE/SEI 7-16</option>
+                                <option value="7-22">ASCE/SEI 7-22</option>
+                                <option value="41-17">ASCE/SEI 41-17</option>
+                                <option value="41-23">ASCE/SEI 41-23</option>
+                            </select>
+                        </div>
+
+                        <!-- Risk Category Selector -->
+                        <div class="form-group">
+                            <label for="risk-category">Risk Category:</label>
+                            <select id="risk-category" name="risk_category" class="form-select" required>
+                                <option value="" disabled selected>Select Risk Category</option>
+                                <option value="1">I</option>
+                                <option value="2">II</option>
+                                <option value="3">III</option>
+                                <option value="4">IV</option>
+                            </select>
+                        </div>
+
+                        <!-- Site Soil Class Selector -->
+                        <div class="form-group">
+                            <label for="soil-class">Site Soil Class:</label>
+                            <select id="soil-class" name="soil_class" class="form-select" required>
+                                <option value="" disabled selected>Select Site Soil Class</option>
+                                <!-- Options will be populated by JavaScript -->
+                            </select>
+                        </div>
+
+                        <!-- Button Group -->
+                        <div class="button-group">
+                            <button type="submit" class="btn unified-submit">
+                                🚀 Generate All Reports
+                            </button>
+                            <button type="button" onclick="window.location.href='{{ url_for('fetch_project_number_get') }}'" class="btn back-btn">Back</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Loading indicator -->
+        <div id="loading-indicator" style="display:none;">
+            <p id="loading-text">Generating all reports, please wait...</p>
+            <div class="unified-progress">
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <div class="progress-steps">
+                    <div class="progress-step" id="step-1">
+                        <div class="step-icon">🔬</div>
+                        <div class="step-label">ASCE Full Report</div>
+                        <div class="step-status">⏳</div>
+                    </div>
+                    <div class="progress-step" id="step-2">
+                        <div class="step-icon">🌍</div>
+                        <div class="step-label">Soil Survey</div>
+                        <div class="step-status">⏳</div>
+                    </div>
+                    <div class="progress-step" id="step-3">
+                        <div class="step-icon">📊</div>
+                        <div class="step-label">Summary Table</div>
+                        <div class="step-status">⏳</div>
+                    </div>
+                </div>
+                <p class="progress-note">
+                    Please keep this page open until all reports are complete.
+                    The process may take 5-10 minutes depending on server load.
+                </p>
+            </div>
+            <div class="spinner"></div>
+        </div>
+    </div>
+
+    <script>
+        class RealProgressTracker {
+            constructor(sessionId) {
+                this.sessionId = sessionId;
+                this.eventSource = null;
+                this.isTracking = false;
+                this.elements = {
+                    progressFill: document.getElementById('progressFill'),
+                    loadingText: document.getElementById('loading-text'),
+                    steps: ['step-1', 'step-2', 'step-3'].map(id => document.getElementById(id))
+                };
+            }
+
+            startTracking() {
+                if (this.isTracking || !this.sessionId) return;
+                
+                this.isTracking = true;
+                console.log(`Starting progress tracking for session: ${this.sessionId}`);
+                
+                // Initialize Server-Sent Events connection
+                this.eventSource = new EventSource(`/progress/${this.sessionId}`);
+                
+                this.eventSource.onmessage = (event) => {
+                    try {
+                        const data = JSON.parse(event.data);
+                        this.updateProgress(data);
+                    } catch (error) {
+                        console.error('Error parsing progress data:', error);
+                    }
+                };
+                
+                this.eventSource.onerror = (error) => {
+                    console.error('EventSource error:', error);
+                    this.handleConnectionError();
+                };
+                
+                // Fallback timeout
+                setTimeout(() => {
+                    if (this.isTracking) {
+                        this.handleTimeout();
+                    }
+                }, 600000); // 10 minutes timeout
+            }
+
+            updateProgress(data) {
+                console.log('Progress update:', data);
+                
+                // Handle different status states
+                switch (data.status) {
+                    case 'starting':
+                    case 'in_progress':
+                        this.updateInProgress(data);
+                        break;
+                    case 'completed':
+                        this.updateCompleted(data);
+                        break;
+                    case 'error':
+                        this.updateError(data);
+                        break;
+                    case 'no_data':
+                        this.handleNoData();
+                        break;
+                }
+            }
+
+            updateInProgress(data) {
+                // Update overall progress bar
+                if (this.elements.progressFill) {
+                    this.elements.progressFill.style.width = `${data.overall_progress}%`;
+                }
+                
+                // Update loading text
+                if (this.elements.loadingText && data.message) {
+                    this.elements.loadingText.textContent = data.message;
+                }
+                
+                // Update individual steps
+                data.steps.forEach((step, index) => {
+                    this.updateStepStatus(index, step);
+                });
+            }
+
+            updateStepStatus(stepIndex, stepData) {
+                if (stepIndex >= this.elements.steps.length) return;
+                
+                const stepElement = this.elements.steps[stepIndex];
+                if (!stepElement) return;
+                
+                const statusElement = stepElement.querySelector('.step-status');
+                if (!statusElement) return;
+                
+                // Remove existing classes
+                stepElement.classList.remove('active', 'completed', 'error');
+                
+                // Update based on step status
+                switch (stepData.status) {
+                    case 'in_progress':
+                        stepElement.classList.add('active');
+                        statusElement.textContent = '🔄';
+                        break;
+                    case 'completed':
+                        stepElement.classList.remove('active');
+                        stepElement.classList.add('completed');
+                        statusElement.textContent = '✅';
+                        break;
+                    case 'error':
+                        stepElement.classList.remove('active');
+                        stepElement.classList.add('error');
+                        statusElement.textContent = '❌';
+                        break;
+                    case 'pending':
+                    default:
+                        statusElement.textContent = '⏳';
+                        break;
+                }
+            }
+
+            updateCompleted(data) {
+                // Update final progress
+                if (this.elements.progressFill) {
+                    this.elements.progressFill.style.width = '100%';
+                }
+                
+                if (this.elements.loadingText) {
+                    this.elements.loadingText.textContent = data.message || 'All reports completed successfully!';
+                }
+                
+                // Mark all steps as completed
+                data.steps.forEach((step, index) => {
+                    this.updateStepStatus(index, step);
+                });
+                
+                // Auto-redirect after success
+                setTimeout(() => {
+                    this.showSuccessMessage();
+                }, 2000);
+                
+                this.stopTracking();
+            }
+
+            updateError(data) {
+                console.error('Progress tracking error:', data.error);
+                
+                if (this.elements.loadingText) {
+                    this.elements.loadingText.textContent = data.message || 'An error occurred during report generation';
+                    this.elements.loadingText.style.color = '#dc2626';
+                }
+                
+                // Mark current step as error
+                if (data.current_step !== undefined) {
+                    this.updateStepStatus(data.current_step, { status: 'error' });
+                }
+                
+                this.showErrorMessage(data.error || 'Unknown error occurred');
+                this.stopTracking();
+            }
+
+            handleConnectionError() {
+                console.error('Lost connection to progress stream');
+                if (this.elements.loadingText) {
+                    this.elements.loadingText.textContent = 'Connection lost. Reports may still be processing...';
+                    this.elements.loadingText.style.color = '#f59e0b';
+                }
+            }
+
+            handleTimeout() {
+                console.warn('Progress tracking timeout');
+                if (this.elements.loadingText) {
+                    this.elements.loadingText.textContent = 'Process is taking longer than expected...';
+                    this.elements.loadingText.style.color = '#f59e0b';
+                }
+            }
+
+            handleNoData() {
+                console.warn('No progress data available');
+                if (this.elements.loadingText) {
+                    this.elements.loadingText.textContent = 'Initializing progress tracking...';
+                }
+            }
+
+            showSuccessMessage() {
+                // Create and show success notification
+                const notification = document.createElement('div');
+                notification.style.cssText = `
+                    position: fixed;
+                    top: 20px;
+                    right: 20px;
+                    background: #059669;
+                    color: white;
+                    padding: 15px 20px;
+                    border-radius: 8px;
+                    box-shadow: 0 4px 15px rgba(5, 150, 105, 0.3);
+                    z-index: 10001;
+                    font-weight: 600;
+                `;
+                notification.textContent = 'All reports generated successfully! Redirecting...';
+                document.body.appendChild(notification);
+                
+                // Redirect to home after showing message
+                setTimeout(() => {
+                    window.location.href = '/';
+                }, 3000);
+            }
+
+            showErrorMessage(error) {
+                // Create and show error notification
+                const notification = document.createElement('div');
+                notification.style.cssText = `
+                    position: fixed;
+                    top: 20px;
+                    right: 20px;
+                    background: #dc2626;
+                    color: white;
+                    padding: 15px 20px;
+                    border-radius: 8px;
+                    box-shadow: 0 4px 15px rgba(220, 38, 38, 0.3);
+                    z-index: 10001;
+                    font-weight: 600;
+                    max-width: 400px;
+                `;
+                notification.innerHTML = `
+                    <div>Report generation failed!</div>
+                    <div style="font-size: 14px; margin-top: 5px; opacity: 0.9;">${error}</div>
+                    <button onclick="this.parentElement.remove()" style="margin-top: 10px; background: rgba(255,255,255,0.2); border: none; color: white; padding: 5px 10px; border-radius: 4px; cursor: pointer;">Close</button>
+                `;
+                document.body.appendChild(notification);
+                
+                // Auto-remove after 10 seconds
+                setTimeout(() => {
+                    if (notification.parentElement) {
+                        notification.remove();
+                    }
+                }, 10000);
+            }
+
+            stopTracking() {
+                if (this.eventSource) {
+                    this.eventSource.close();
+                    this.eventSource = null;
+                }
+                this.isTracking = false;
+                console.log('Progress tracking stopped');
+            }
+        }
+
+        // Global progress tracker instance
+        let progressTracker = null;
+
+        // Soil class options
+        const soilClassOptions = {
+            '7-10': [
+                { value: '0', text: 'A - Hard Rock' },
+                { value: '1', text: 'B - Rock' },
+                { value: '2', text: 'C - Very Dense Soil and Soft Rock' },
+                { value: '3', text: 'D - Stiff Soil' },
+                { value: '4', text: 'E - Soft Clay Soil' },
+                { value: '5', text: 'F - Site Response Analysis' }
+            ],
+            '7-16': [
+                { value: '0', text: 'A - Hard Rock' },
+                { value: '1', text: 'B - Rock' },
+                { value: '2', text: 'B - Estimated (see Section 11.4.3)' },
+                { value: '3', text: 'C - Very Dense Soil and Soft Rock' },
+                { value: '4', text: 'D - Stiff Soil' },
+                { value: '5', text: 'D - Default (see Section 11.4.3)' },
+                { value: '6', text: 'E - Soft Clay Soil' },
+                { value: '7', text: 'F - Site Response Analysis' }
+            ],
+            '7-22': [
+                { value: '0', text: 'Default' },
+                { value: '1', text: 'A - Hard Rock' },
+                { value: '2', text: 'B - Rock' },
+                { value: '3', text: 'BC' },
+                { value: '4', text: 'C - Very Dense Soil and Soft Rock' },
+                { value: '5', text: 'CD' },
+                { value: '6', text: 'D - Stiff Soil' },
+                { value: '7', text: 'DE' },
+                { value: '8', text: 'E - Soft Clay Soil' }
+            ]
+        };
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            // Update soil class options when standard version changes
+            const standardsSelector = document.getElementById('standards-selector');
+            if (standardsSelector) {
+                standardsSelector.addEventListener('change', function() {
+                    const soilClassSelect = document.getElementById('soil-class');
+                    soilClassSelect.innerHTML = '<option value="" disabled selected>Select Site Soil Class</option>';
+                    
+                    const options = soilClassOptions[this.value] || [];
+                    options.forEach(option => {
+                        const optElement = document.createElement('option');
+                        optElement.value = option.value;
+                        optElement.textContent = option.text;
+                        soilClassSelect.appendChild(optElement);
+                    });
+                });
+            }
+
+            // Check if we have a progress session ID (from server response)
+            const pageContainer = document.querySelector('.page-container');
+            const sessionId = pageContainer ? pageContainer.getAttribute('data-progress-session-id') : null;
+            
+            if (sessionId) {
+                console.log('Found existing session ID:', sessionId);
+                // Show loading indicator immediately
+                const loadingIndicator = document.getElementById('loading-indicator');
+                if (loadingIndicator) {
+                    loadingIndicator.style.display = 'block';
+                }
+                
+                // Start progress tracking
+                progressTracker = new RealProgressTracker(sessionId);
+                progressTracker.startTracking();
+            }
+
+            // Form submission handling
+            const asceForm = document.getElementById('asceForm');
+            if (asceForm) {
+                asceForm.addEventListener('submit', function(e) {
+                    // Validate form
+                    const standardVersion = document.getElementById('standards-selector').value;
+                    const riskCategory = document.getElementById('risk-category').value;
+                    const soilClass = document.getElementById('soil-class').value;
+                    
+                    if (!standardVersion || !riskCategory || !soilClass) {
+                        e.preventDefault();
+                        alert('Please select all required ASCE options.');
+                        return;
+                    }
+                    
+                    // Show loading indicator
+                    const loadingIndicator = document.getElementById('loading-indicator');
+                    if (loadingIndicator) {
+                        loadingIndicator.style.display = 'block';
+                    }
+                    
+                    // Form will submit normally and server will handle the rest
+                });
+            }
+        });
+
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', function() {
+            if (progressTracker) {
+                progressTracker.stopTracking();
+            }
+        });
+    </script>
+</body>
+</html>

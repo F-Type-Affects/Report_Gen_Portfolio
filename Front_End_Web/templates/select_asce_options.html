@@ -10,7 +10,28 @@
 <body>
     {% include 'flash_message.html' %}
     <div class="container">
+        {% if unified_mode %}
+        <h2>All Web Scraping Reports - ASCE Configuration</h2>
+        <div class="unified-info">
+            <h3>📋 Reports to be Generated:</h3>
+            <ul class="report-list">
+                <li>🔬 <strong>ASCE Full Report PDF</strong> - Complete hazard analysis document</li>
+                <li>🌍 <strong>USDA Soil Survey Reports</strong> - Linear Extensibility & Unified Soil Classification</li>
+                <li>📊 <strong>ASCE Summary Table</strong> - Hazard data table (saved to existing AHJ Report)</li>
+            </ul>
+            <div class="prerequisite-warning">
+                <h4>⚠️ Important Prerequisite:</h4>
+                <p>The <strong>AHJ Report must already exist</strong> for this project before running web scraping reports. 
+                The ASCE Summary Table will be added to your existing AHJ Report.</p>
+            </div>
+            <p class="processing-note">
+                <strong>⏱️ Processing Time:</strong> This process typically takes 5-10 minutes to complete all reports.
+                Please be patient and do not close the browser window.
+            </p>
+        </div>
+        {% else %}
         <h2>Select ASCE Hazard Tool Options</h2>
+        {% endif %}
 
         <!-- Project Info Display -->
         <div class="project-info">
@@ -62,12 +83,19 @@
 
             <!-- Button Group -->
             <div class="button-group">
-                <!-- Show appropriate buttons based on the current route -->
-                {% if request.path == url_for('generate_asce_summary') %}
+                {% if unified_mode %}
+                <!-- Unified mode: single button for all reports -->
+                <button type="submit" class="btn submit-btn unified-submit">
+                    🚀 Generate All Reports
+                </button>
+                {% elif request.path == url_for('generate_asce_summary') %}
+                <!-- Individual ASCE Summary mode -->
                 <button type="submit" class="btn submit-btn">Generate Summary</button>
                 {% elif request.path == url_for('generate_asce_full_report') %}
+                <!-- Individual ASCE Full Report mode -->
                 <button type="submit" class="btn submit-btn full-report-btn">Generate Full Report</button>
                 {% else %}
+                <!-- Default mode: show both options -->
                 <button type="submit" class="btn submit-btn">Generate Summary</button>
                 <button type="submit" formaction="{{ url_for('generate_asce_full_report') }}" class="btn submit-btn full-report-btn">Generate Full Report</button>
                 {% endif %}
@@ -76,6 +104,35 @@
 
             <!-- Loading indicator -->
             <div id="loading-indicator" style="display:none;">
+                {% if unified_mode %}
+                <p id="loading-text">Generating all reports, please wait...</p>
+                <div class="unified-progress">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill"></div>
+                    </div>
+                    <div class="progress-steps">
+                        <div class="progress-step" id="step-1">
+                            <div class="step-icon">🔬</div>
+                            <div class="step-label">ASCE Full Report</div>
+                            <div class="step-status">⏳</div>
+                        </div>
+                        <div class="progress-step" id="step-2">
+                            <div class="step-icon">🌍</div>
+                            <div class="step-label">Soil Survey</div>
+                            <div class="step-status">⏳</div>
+                        </div>
+                        <div class="progress-step" id="step-3">
+                            <div class="step-icon">📊</div>
+                            <div class="step-label">Summary Table</div>
+                            <div class="step-status">⏳</div>
+                        </div>
+                    </div>
+                    <p class="progress-note">
+                        Please keep this page open until all reports are complete.
+                        The process may take 5-10 minutes depending on server load.
+                    </p>
+                </div>
+                {% else %}
                 <p id="loading-text">
                     {% if request.path == url_for('generate_asce_full_report') %}
                     Downloading full report, please wait...
@@ -83,12 +140,16 @@
                     Scraping ASCE data, please wait...
                     {% endif %}
                 </p>
+                {% endif %}
                 <div class="spinner"></div>
             </div>
         </form>
     </div>
 
     <script>
+        // Check if we're in unified mode
+        const unifiedMode = {{ 'true' if unified_mode else 'false' }};
+        
         // Soil class options for each standard version
         const soilClassOptions = {
             '7-10': [
@@ -136,10 +197,61 @@
             });
         });
 
-        // Show loading indicator on form submit
-        document.getElementById('asceForm').addEventListener('submit', function() {
-            document.getElementById('loading-indicator').style.display = 'block';
+        // Enhanced form submission handling for unified mode
+        document.getElementById('asceForm').addEventListener('submit', function(e) {
+            const loadingIndicator = document.getElementById('loading-indicator');
+            loadingIndicator.style.display = 'block';
+            
+            if (unifiedMode) {
+                // Start enhanced progress simulation for unified mode
+                simulateUnifiedProgress();
+            }
         });
+        
+        function simulateUnifiedProgress() {
+            const progressFill = document.getElementById('progressFill');
+            const steps = ['step-1', 'step-2', 'step-3'];
+            let currentStep = 0;
+            let progress = 0;
+            
+            // Simulate overall progress bar
+            const progressInterval = setInterval(() => {
+                progress += Math.random() * 2 + 0.5; // Random increment
+                if (progress > 100) progress = 100;
+                
+                if (progressFill) {
+                    progressFill.style.width = progress + '%';
+                }
+                
+                if (progress >= 100) {
+                    clearInterval(progressInterval);
+                }
+            }, 1000);
+            
+            // Simulate step progress
+            const stepInterval = setInterval(() => {
+                if (currentStep < steps.length) {
+                    const stepElement = document.getElementById(steps[currentStep]);
+                    const statusElement = stepElement.querySelector('.step-status');
+                    
+                    // Mark current step as in progress
+                    statusElement.textContent = '🔄';
+                    stepElement.classList.add('active');
+                    
+                    // Simulate completion after a realistic delay
+                    const completionTime = Math.random() * 60000 + 90000; // 1.5-2.5 minutes per step
+                    setTimeout(() => {
+                        statusElement.textContent = '✅';
+                        stepElement.classList.remove('active');
+                        stepElement.classList.add('completed');
+                    }, completionTime);
+                    
+                    currentStep++;
+                } else {
+                    clearInterval(stepInterval);
+                }
+            }, 5000); // Start new step every 5 seconds
+        }
     </script>
 </body>
 </html>
