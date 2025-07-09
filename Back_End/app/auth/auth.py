@@ -2,7 +2,7 @@ import os
 import requests
 import logging
 import jwt
-from .config import get_config
+from app.core.config import get_config
 
 config = get_config()
 

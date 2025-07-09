@@ -4,7 +4,7 @@ from docx import Document
 from docx.oxml.ns import qn
 from docx.oxml import OxmlElement
 import logging
-from .config import get_config
+from app.core.config import get_config
 
 config = get_config()
 

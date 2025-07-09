@@ -2,26 +2,17 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import Select, WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import TimeoutException, ElementClickInterceptedException, StaleElementReferenceException
+from selenium.common.exceptions import TimeoutException, ElementClickInterceptedException
 from selenium.webdriver.chrome.service import Service  # Added import for Service
 import time
-import os
 import logging
-import traceback
-import shutil
 import platform  # Added import for platform detection
 from dataclasses import dataclass
-from typing import Dict, Tuple, Optional, List
-
-# We can use the same config as the example since the parameters for the tool are the same
-from .asce_config import ASCEToolConfig
-
-
-@dataclass
-class ASCEReportConfig:
-    """Configuration for ASCE Report download functionality"""
-    download_directory: str  # Temporary directory for downloads
-    wait_time: int = 60  # Time to wait for download to complete
+from app.services.asce.asce_config import ASCEToolConfig
+from app.core.models import ASCESummaryData
+from typing import Dict, Tuple, Optional
+import os
+import openpyxl
 
 
 def get_chromedriver_path():
@@ -51,96 +42,24 @@ def get_chromedriver_path():
         return None
 
 
-class ASCEReportScraper:
-    """Handles web scraping and downloading of ASCE Hazard Tool reports"""
+class ASCEScraper:
+    """Handles web scraping of ASCE Hazard Tool data"""
     
-    def __init__(self, config: ASCEReportConfig = None):
-        """Initialize the scraper with optional config"""
+    def __init__(self):
+        """Initialize the scraper"""
         self.driver = None
-        self.temp_dir = None
-        self.config = config or ASCEReportConfig(
-            download_directory=os.path.join(os.getcwd(), "temp_downloads"),
-            wait_time=90
-        )
         self.logger = self._setup_logger()
         
     def _setup_logger(self) -> logging.Logger:
         """Sets up logging for the scraper"""
-        logger = logging.getLogger('asce_report_scraper')
+        logger = logging.getLogger('asce_scraper')
         logger.setLevel(logging.INFO)
-        
-        # Avoid adding duplicate handlers if logger already exists
-        if not logger.handlers:
-            handler = logging.StreamHandler()
-            formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-            handler.setFormatter(formatter)
-            logger.addHandler(handler)
-            
+        handler = logging.StreamHandler()
+        formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+        handler.setFormatter(formatter)
+        logger.addHandler(handler)
         return logger
 
-    def initialize_driver(self) -> bool:
-        """Initialize and configure the Chrome WebDriver"""
-        try:
-            import tempfile
-            import shutil
-            
-            # Create unique temp directory for gunicorn workers to use
-            self.temp_dir = tempfile.mkdtemp()
-            self.logger.info(f"Created temporary directory: {self.temp_dir}")
-            
-            options = webdriver.ChromeOptions()
-            options.page_load_strategy = 'normal'
-            
-            # Configure download behavior
-            prefs = {
-                "download.default_directory": self.temp_dir,
-                "download.prompt_for_download": False,
-                "download.directory_upgrade": True,
-                "safebrowsing.enabled": False
-            }
-            options.add_experimental_option("prefs", prefs)
-            
-            # Updated Chrome options to match ahj_manager.py
-            options.add_argument('--no-sandbox')
-            options.add_argument('--headless')
-            options.add_argument('--disable-dev-shm-usage')
-            options.add_argument(f'--user-data-dir={self.temp_dir}')
-            
-            # Replace maximize_window with window size setting
-            options.add_argument("--window-size=1920,1080")
-            
-            # Add additional options from ahj_manager.py for better stability
-            options.add_argument('--disable-gpu')
-            options.add_argument('--disable-blink-features=AutomationControlled')
-            options.add_experimental_option("useAutomationExtension", False)
-            options.add_experimental_option('excludeSwitches', ['enable-logging'])
-            options.add_argument('--log-level=3')
-            
-            # Get ChromeDriver path
-            chromedriver_path = get_chromedriver_path()
-            
-            if chromedriver_path:
-                # Use the ChromeDriver from our drivers directory
-                service = Service(chromedriver_path)
-                self.driver = webdriver.Chrome(service=service, options=options)
-                self.logger.info("Chrome driver initialized using project ChromeDriver")
-            else:
-                # Fallback to system ChromeDriver
-                self.driver = webdriver.Chrome(options=options)
-                self.logger.info("Chrome driver initialized using system ChromeDriver")
-            
-            # Remove the maximize_window() call since we're using --window-size argument
-            # self.driver.maximize_window()  # This line has been removed
-            
-            self.logger.info("WebDriver initialized successfully")
-            return True
-        except Exception as e:
-            self.logger.error(f"Failed to initialize driver: {str(e)}")
-            if hasattr(self, 'temp_dir') and self.temp_dir and os.path.exists(self.temp_dir):
-                shutil.rmtree(self.temp_dir, ignore_errors=True)
-            return False
-
-    # Rest of the class methods remain unchanged...
     def initial_page_load(self, timeout: int = 40) -> Tuple[bool, Dict[str, bool]]:
         """
         Optimized initial page load detection that checks essential elements.
@@ -188,7 +107,6 @@ class ASCEReportScraper:
                 self.logger.info("jQuery state ready")
             except TimeoutException:
                 self.logger.warning("Warning: jQuery not ready, but continuing...")
-                # Don't return False as jQuery might not be critical
 
             # 3. Search Input Visibility Check
             try:
@@ -230,7 +148,6 @@ class ASCEReportScraper:
 
         except Exception as e:
             self.logger.error(f"Critical error during initial page load: {str(e)}")
-            traceback.print_exc()
             return False, checks_status
 
     def wait_for_element(self, selector: str, timeout: int = 30) -> Optional[webdriver.remote.webelement.WebElement]:
@@ -311,6 +228,57 @@ class ASCEReportScraper:
             self.logger.error(f"Error entering text: {str(e)}")
             return False
 
+    def initialize_driver(self) -> bool:
+        """Initialize and configure the Chrome WebDriver"""
+        try:
+            import tempfile
+            
+            # Create unique temp directory for gunicorn workers to use
+            self.temp_dir = tempfile.mkdtemp()
+            
+            options = webdriver.ChromeOptions()
+            options.page_load_strategy = 'normal'
+            
+            # Updated Chrome options to match ahj_manager.py
+            options.add_argument('--no-sandbox')
+            options.add_argument('--headless')
+            options.add_argument('--disable-dev-shm-usage')
+            options.add_argument(f'--user-data-dir={self.temp_dir}')
+            
+            # Replace maximize_window with window size setting
+            options.add_argument("--window-size=1920,1080")
+            
+            # Add additional options from ahj_manager.py for better stability
+            options.add_argument('--disable-gpu')
+            options.add_argument('--disable-blink-features=AutomationControlled')
+            options.add_experimental_option("useAutomationExtension", False)
+            options.add_experimental_option('excludeSwitches', ['enable-logging'])
+            options.add_argument('--log-level=3')
+            
+            # Get ChromeDriver path
+            chromedriver_path = get_chromedriver_path()
+            
+            if chromedriver_path:
+                # Use the ChromeDriver from our drivers directory
+                service = Service(chromedriver_path)
+                self.driver = webdriver.Chrome(service=service, options=options)
+                self.logger.info("Chrome driver initialized using project ChromeDriver")
+            else:
+                # Fallback to system ChromeDriver
+                self.driver = webdriver.Chrome(options=options)
+                self.logger.info("Chrome driver initialized using system ChromeDriver")
+            
+            # Remove the maximize_window() call since we're using --window-size argument
+            # self.driver.maximize_window()  # This line has been removed
+            
+            return True
+        except Exception as e:
+            if hasattr(self, 'temp_dir'):
+                import shutil
+                shutil.rmtree(self.temp_dir, ignore_errors=True)
+            self.logger.error(f"Failed to initialize driver: {str(e)}")
+            return False
+
     def select_dropdown_option(self, dropdown_element: webdriver.remote.webelement.WebElement, option_value: str, timeout: int = 30) -> bool:
         """
         Selects the specified option from a dropdown element.
@@ -341,107 +309,135 @@ class ASCEReportScraper:
             self.logger.error(f"Error selecting option from dropdown: {str(e)}")
             return False
 
-    def wait_for_download(self, timeout: int = 90) -> Optional[str]:
+    def extract_table_data(self, timeout: int = 30) -> Dict:
         """
-        Waits for a file download to complete within specified timeout.
-        
+        Extracts data from the ASCE summary table handling all nested elements.
+    
         Args:
             timeout: Maximum wait time in seconds
-            
+        
         Returns:
-            Path to downloaded file if successful, None otherwise
+            Dictionary containing the table data
         """
-        start_time = time.time()
-        self.logger.info(f"Waiting for download to complete (timeout: {timeout}s)...")
+        table_data = {}
+        try:
+            # Use reliable XPath that combines ID and class
+            table_selector = "#summaryPopup > div.popup-body.padding.welcome-body"
         
-        while (time.time() - start_time) < timeout:
-            # Check if any files have been downloaded
-            files = os.listdir(self.temp_dir)
-            pdf_files = [f for f in files if f.endswith('.pdf')]
-            
-            # Check for PDF files
-            if pdf_files:
-                # Check if any file has a size greater than 0 and doesn't end with .crdownload
-                for pdf_file in pdf_files:
-                    file_path = os.path.join(self.temp_dir, pdf_file)
-                    if os.path.getsize(file_path) > 0:
-                        self.logger.info(f"Download completed: {file_path}")
-                        return file_path
-            
-            # Sleep briefly before checking again
-            time.sleep(1)
+            # Wait for table to be present
+            table = WebDriverWait(self.driver, timeout).until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, table_selector))
+            )
+            self.logger.info("Summary table found")
         
-        self.logger.error(f"Download timeout after {timeout}s")
-        return None
+            current_section = None
+            rows = table.find_elements(By.TAG_NAME, "tr")
+        
+            for row in rows:
+                if "summary-header-row" in row.get_attribute("class"):
+                    current_section = row.find_element(By.TAG_NAME, "td").text.strip()
+                    table_data[current_section] = []
+                
+                elif "summary-item-row" in row.get_attribute("class"):
+                    cells = row.find_elements(By.TAG_NAME, "td")
+                    if len(cells) == 2 and current_section:
+                        # Get parameter and value including any sub/superscripts
+                        param = cells[0].get_attribute('textContent').strip()
+                        value = cells[1].get_attribute('textContent').strip()
+                    
+                        table_data[current_section].append({
+                            'parameter': param,
+                            'value': value
+                        })
 
-    def save_report(self, download_path: str, destination_path: str) -> bool:
+        except TimeoutException:
+            self.logger.error("Timeout waiting for summary table")
+            raise
+        except Exception as e:
+            self.logger.error(f"Error extracting table data: {str(e)}")
+            raise
+
+        return table_data
+
+    def save_summary_to_excel(self, summary_data: Dict) -> Optional[str]:
         """
-        Saves the downloaded report to the specified destination path.
-        
+        Saves the extracted summary data to Excel.
+    
         Args:
-            download_path: Path to the downloaded file
-            destination_path: Full path where the file should be saved
-            
+            summary_data: Dictionary containing the table data
+        
         Returns:
-            bool: True if save was successful, False otherwise
+            str: Path to saved file if successful, None if failed
         """
         try:
-            # Log the full paths for debugging
-            self.logger.info(f"Download path: {download_path}")
-            self.logger.info(f"Destination path: {destination_path}")
-            
-            # Check if destination directory exists
-            dest_dir = os.path.dirname(destination_path)
-            self.logger.info(f"Checking if directory exists: {dest_dir}")
+            os.makedirs(self.config.save_directory, exist_ok=True)
         
-            if not os.path.exists(dest_dir):
-                self.logger.error(f"Directory does not exist: {dest_dir}")
-                return False
+            workbook = openpyxl.Workbook()
+            sheet = workbook.active
+        
+            # Add headers
+            headers = ["Section", "Parameter", "Value"]
+            for col, header in enumerate(headers, 1):
+                cell = sheet.cell(row=1, column=col)
+                cell.value = header
+                cell.font = openpyxl.styles.Font(bold=True)
+        
+            current_row = 2
+        
+            # Write data section by section
+            for section, items in summary_data.items():
+                # Add section header
+                sheet.cell(row=current_row, column=1, value=section)
+                current_row += 1
             
-            # Copy the file to destination
-            shutil.copy2(download_path, destination_path)
-            self.logger.info(f"Report saved to: {destination_path}")
+                # Add section items
+                for item in items:
+                    sheet.cell(row=current_row, column=2, value=item['parameter'])
+                    sheet.cell(row=current_row, column=3, value=item['value'])
+                    current_row += 1
             
-            return True
-            
+                # Add blank row between sections
+                current_row += 1
+        
+            # Save the workbook
+            file_path = os.path.join(self.config.save_directory, "summary_data.xlsx")
+            workbook.save(file_path)
+        
+            self.logger.info(f"Data saved to: {file_path}")
+            return file_path
+        
         except Exception as e:
-            self.logger.error(f"Error saving report: {str(e)}")
-            return False
-        
+            self.logger.error(f"Error saving to Excel: {str(e)}")
+            return None
+    
     def cleanup(self):
         """Cleanup resources"""
         try:
             if self.driver:
                 self.driver.quit()
                 self.driver = None
-                self.logger.info("WebDriver closed")
             
-            if self.temp_dir and os.path.exists(self.temp_dir):
+            if hasattr(self, 'temp_dir'):
+                import shutil
                 shutil.rmtree(self.temp_dir, ignore_errors=True)
-                self.logger.info(f"Temporary directory removed: {self.temp_dir}")
-                self.temp_dir = None
-                
         except Exception as e:
             self.logger.error(f"Error during cleanup: {str(e)}")
 
-    def run_report_download(self, address: str, 
-                           standard_version: str, 
-                           risk_category: str, 
-                           soil_class: str) -> Tuple[bool, Optional[str], Optional[str]]:
+    def run_scraping_process(self, address: str, standard_version: str, risk_category: str, soil_class: str) -> Tuple[bool, Optional[str], Optional[Dict]]:
         """
-        Main method to execute the web scraping and report download process.
-        
+        Main method to execute the web scraping process.
+    
         Args:
             address: Project address to search
-            standard_version: ASCE Standard Version (e.g. "7-16")
-            risk_category: Risk Category (e.g. "2")
-            soil_class: Site Soil Class (e.g. "5")
-            
+            standard_version: ASCE Standard Version (e.g., "7-16")
+            risk_category: Risk Category (e.g., "2")
+            soil_class: Site Soil Class (e.g., "5")
+        
         Returns:
             Tuple containing:
             - Success status (bool)
             - Error message if any (Optional[str])
-            - Path to downloaded file if successful (Optional[str])
+            - Summary data if successful (Optional[Dict])
         """
         # Validate inputs using ASCEToolConfig
         if not ASCEToolConfig.validate_selections(standard_version, risk_category, soil_class):
@@ -454,53 +450,48 @@ class ASCEReportScraper:
             if not self.driver:
                 if not self.initialize_driver():
                     return False, "Failed to initialize browser", None
-            
+        
             # Open the webpage
-            self.logger.info("Navigating to the ASCE Hazard Tool...")
             self.driver.get("https://ascehazardtool.org/")
-            
+        
             # Initial page load check
             success, status = self.initial_page_load()
             if not success:
                 failed_checks = [k for k, v in status.items() if not v]
                 return False, f"Failed initial page load checks: {failed_checks}", None
-            
+        
             time.sleep(12)
-            
+        
             # Close cookie popup
-            self.logger.info("Closing cookie popup...")
             cookie_element = self.wait_for_element(".cc-btn.cc-dismiss")
             if cookie_element:
                 if not self.click_element(cookie_element):
                     self.logger.warning("Failed to close cookie popup")
-                    
-            time.sleep(1)
-            
+        
+            time.sleep(3)
+        
             # Close ASCE hazard popup
-            self.logger.info("Closing ASCE hazard tool popup...")
             hazard_element = self.wait_for_element("#welcomePopup > div.popup-header.blue.darken-3.welcome-header > span.details-popup-close-icon")
             if hazard_element:
                 if not self.click_element(hazard_element):
                     self.logger.warning("Failed to close ASCE hazard popup")
-                    
+        
             time.sleep(2)
-            
-            # Enter address and search
-            self.logger.info(f"Entering address: {address}")
+        
+            # Enter address
             input_element = self.wait_for_element("#geocoder_input")
             if not input_element or not self.enter_text(input_element, address):
                 return False, "Failed to enter address", None
-            
+        
             time.sleep(3)
-            
-            # Click search button
-            self.logger.info("Clicking search button...")
+        
+            # Click search
             search_element = self.wait_for_element("#locate-address")
             if not search_element or not self.click_element(search_element):
                 return False, "Failed to click search button", None
-                
-            time.sleep(5)
-            
+
+            time.sleep(10)
+        
             # Select dropdowns
             dropdown_configs = [
                 ("#standards-selector", standard_version),
@@ -515,7 +506,7 @@ class ASCEReportScraper:
                 time.sleep(2)
             
             time.sleep(3)
-            
+        
             # Select load types
             base_selector = "#criteria .flex.flex-row.flex-wrap.padding--small"
             load_types = ["Wind", "Seismic", "Ice", "Snow"]
@@ -526,64 +517,46 @@ class ASCEReportScraper:
                 if not load_element or not self.click_element(load_element):
                     self.logger.warning(f"Failed to select {load_type} Load")
                 time.sleep(2)
-            
-            time.sleep(2)
-            
+
+            time.sleep(3)
+        
             # Click View Results
-            self.logger.info("Clicking View Results button...")
             results_element = self.wait_for_element("#resultsButton > a")
             if not results_element or not self.click_element(results_element):
                 return False, "Failed to click results button", None
-            
-            # Wait for results to load
+        
             time.sleep(30)
+        
+            # Click Summary Button
+            summary_element = self.wait_for_element("#report > div.full-report-container.padding--small.white > a:nth-child(3)")
+            if not summary_element or not self.click_element(summary_element):
+                return False, "Failed to click summary button", None
+        
+            time.sleep(5)
+        
+            # Extract table data
+            summary_data_dict = self.extract_table_data()
+            if not summary_data_dict:
+                return False, "Failed to extract table data", None
             
-            # Click Download Full Report button
-            self.logger.info("Clicking Download Full Report button...")
-            report_selector = "#report > div.full-report-container.padding--small.white > a:nth-child(2)"
-            report_element = self.wait_for_element(report_selector)
-            if not report_element or not self.click_element(report_element):
-                return False, "Failed to click Download Full Report button", None
+            time.sleep(2)
             
-            time.sleep(30)
+            # Convert dictionary to ASCESummaryData
+            summary_data = ASCESummaryData.from_dict(summary_data_dict)
             
-            # Wait for download to complete
-            download_path = self.wait_for_download(self.config.wait_time)
-            if not download_path:
-                return False, "Download failed or timed out", None
+            # Close summary table
+            table_close_element = self.wait_for_element("#summaryPopup > div.popup-header.blue.darken-3.welcome-header > span.details-popup-close-icon")
+            if table_close_element:
+                if not self.click_element(table_close_element):
+                    self.logger.warning("Failed to close summary table")
+        
+            time.sleep(1)
             
-            time.sleep(10)
-            
-            # Close final popup if it appears
-            self.logger.info("Closing final popup if present...")
-            final_popup = "#detailsPopup > div.fill_wide.padding__long.white.popup-ok-button > a"
-            final_element = self.wait_for_element(final_popup)
-            if final_element:
-                if not self.click_element(final_element):
-                    self.logger.warning("Failed to close final popup")
-            
-            # Create a copy of the download path because we'll be deleting the original
-            temp_copy = None
-            try:
-                # Create a temporary file in a system temp directory that won't be deleted
-                import tempfile
-                temp_fd, temp_copy = tempfile.mkstemp(suffix='.pdf')
-                os.close(temp_fd)  # Close the file descriptor
-            
-                # Copy the file to our safe temporary location
-                shutil.copy2(download_path, temp_copy)
-                self.logger.info(f"Created temporary copy at: {temp_copy}")
-            except Exception as e:
-                self.logger.error(f"Error creating temporary copy: {str(e)}")
-                return False, f"Error creating temporary copy: {str(e)}", None
-            
-            # Return the path to the temporary copy
-            return True, None, temp_copy
-            
+            return True, None, summary_data
+
         except Exception as e:
-            error_msg = f"Error during report download process: {str(e)}"
+            error_msg = f"Error during scraping process: {str(e)}"
             self.logger.error(error_msg)
-            traceback.print_exc()
             return False, error_msg, None
         
         finally:

@@ -1,7 +1,7 @@
 import sqlite3
 import logging
 import os
-from .config import get_config
+from app.core.config import get_config
 
 config = get_config()
 

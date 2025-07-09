@@ -4,9 +4,9 @@ import json
 from urllib.parse import urlparse, quote
 import requests
 import logging
-from .token_manager import refresh_access_token, get_valid_access_token, fetch_access_token, fetch_access_token_by_email
-from .database import get_sub_by_email
-from .config import get_config
+from app.auth.token_manager import refresh_access_token, get_valid_access_token, fetch_access_token, fetch_access_token_by_email
+from app.core.database import get_sub_by_email
+from app.core.config import get_config
 
 config = get_config()
 

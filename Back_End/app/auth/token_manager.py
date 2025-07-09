@@ -4,8 +4,8 @@ import jwt
 import os
 import logging
 import time
-from .database import execute_query, get_sub_by_email, print_all_tokens
-from .config import get_config
+from app.core.database import execute_query, get_sub_by_email, print_all_tokens
+from app.core.config import get_config
 
 config = get_config()
 
