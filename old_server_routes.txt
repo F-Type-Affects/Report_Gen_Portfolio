@@ -1,0 +1,126 @@
+Old routes just in case:
+
+"""App route to the home page of web application index.html""" 
+@app.route('/')
+def home():
+    return render_template('index.html')
+
+"""End of home route"""
+
+"""
+These app routes handle the login and authentication process to the BQE CORE Platform.
+This process grants access to the application for the user as well as saves the relevant user information
+in a simple SQLite table so they do not need to do this everytime they use the application
+"""
+@app.route('/login')
+def login():
+    # Check client_id directly
+    client_id = config.CLIENT_ID
+    if not client_id:
+        logger.error("CLIENT_ID is not set.")
+    else:
+        logger.info(f"Client ID Set")
+
+    # Get the authorization URL from the auth module
+    auth_url = get_authorization_url()
+
+    # Redirect the user to the BQE Core authorization page
+    return redirect(auth_url)
+
+# handle call back response from BQE Core OAuth2 process and exchange code for tokens
+@app.route('/callback')
+def callback():
+    code = request.args.get('code')
+    if not code:
+        return "Authorization code not found", 400
+
+    token_response = exchange_code_for_token(code)
+    if not isinstance(token_response, requests.Response):
+        return f"Error during token exchange: {token_response['text']}", token_response['status_code']
+
+    if token_response.status_code != 200:
+        return f"Failed to retrieve token: {token_response.status_code} - {token_response.text}", token_response.status_code
+
+    try:
+        #get token data
+        token_data = token_response.json()
+        #decode the id token
+        decoded_id_token = decode_id_token(token_data['id_token'])
+        # extract the sub and email
+        sub = decoded_id_token.get('sub')
+        if not sub:
+            return "Sub not found in the ID token", 400
+        
+        # get access token
+        access_token = token_data.get('access_token')
+        if not access_token:
+            return "Access token not found in token data", 400
+        
+        # get user info
+        user_info = get_user_info(access_token)
+        if not user_info:
+            return "Failed to retrieve user info.", 500
+        
+        logger.debug("User Info: %s", user_info)
+        
+        # Extract required user information
+        email = user_info.get('email')
+        first_name = user_info.get('given_name')
+        last_name = user_info.get('family_name')
+        user_id = user_info.get('user_id')  # Assuming 'user_id' is present
+        
+        if not all([email, first_name, last_name, user_id]):
+            logger.error("Missing user information from user_info")
+            return "Incomplete user information received.", 400
+        
+        #adjust expires_in to absolute time
+        current_time = int(time.time())
+        
+        #set expires in to correct time
+        token_data['expires_in'] = int(token_data.get('expires_in', 0)) + current_time
+        
+        #set time for refresh token to expire
+        token_data['refresh_token_expires_in'] = current_time + 1 * 24 * 3600
+        
+        # Save extracted token and user data
+        save_token_data(
+            sub=sub,
+            email=email,
+            first_name=first_name,
+            last_name=last_name,
+            user_id=user_id,
+            id_token=token_data.get('id_token'),
+            access_token=token_data.get('access_token'),
+            expires_in=token_data.get('expires_in'),
+            token_type=token_data.get('token_type'),
+            refresh_token=token_data.get('refresh_token'),
+            refresh_token_expires_in=token_data.get('refresh_token_expires_in')
+        )
+        login_user(sub)
+        
+        # Flash success message
+        flash("Login successful! You can now use the application.")
+        
+        # Redirect to the home page (index.html) with a success message
+        return redirect(url_for('home'))
+    
+    except Exception as e:
+        logging.error(f"Error during callback processing: {e}")
+        return "An internal error occured.", 500
+
+# get a users access token for API call
+@app.route('/api/token')
+def get_access_token():
+    sub = session.get('user_sub')
+    if sub is None:
+        return jsonify({"error": "User not authenticated"}), 401
+    try:
+        access_token = get_valid_access_token(sub)  # function to fetch token
+        return jsonify({'access_token': access_token}), 200
+    except Exception as e:
+        logging.error(f"Error retrieving access token: {e}")
+        return jsonify({"error": "Failed to retrieve access token"}), 500
+
+"""
+End of Authentication routes
+"""

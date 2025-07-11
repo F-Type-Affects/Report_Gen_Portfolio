@@ -20,10 +20,10 @@
         <p><strong>Project Number:</strong> {{ project_data['code'] }}</p>
         <p><strong>By:</strong> {{ first_name }} {{ last_name }}</p>
         
-        <form method="POST" action="{{ url_for('generate_cover_letter_confirmed') }}">
+        <form method="POST" action="{{ url_for('cover_letter.generate_cover_letter_confirmed') }}">
             <button type="submit">Confirm</button>
-            <button type="button" onclick="window.location.href='{{ url_for('fetch_project_number_get') }}'">Search Again</button>
-            <button type="button" onclick="window.location.href='{{ url_for('home') }}'">Home</button>
+            <button type="button" onclick="window.location.href='{{ url_for('project.fetch_project_number_get') }}'">Search Again</button>
+            <button type="button" onclick="window.location.href='{{ url_for('auth.home') }}'">Home</button>
         </form>
     </div>
 </body>

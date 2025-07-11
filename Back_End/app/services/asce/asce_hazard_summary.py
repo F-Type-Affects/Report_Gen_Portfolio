@@ -29,17 +29,26 @@ def get_chromedriver_path():
     else:
         driver_name = "chromedriver"
     
-    # Get the path to the drivers directory
+    # Get the path to the current file
     current_file = os.path.abspath(__file__)
-    back_end_dir = os.path.dirname(current_file)
-    utils_dir = os.path.join(back_end_dir, "utils", "drivers")
-    driver_path = os.path.join(utils_dir, driver_name)
+    current_dir = os.path.dirname(current_file)
     
-    # Check if the driver exists
-    if os.path.exists(driver_path):
-        return driver_path
-    else:
-        return None
+    # Navigate up to find the 'app' directory
+    # Keep going up until we find the 'app' directory
+    while current_dir:
+        if os.path.basename(current_dir) == 'app':
+            # Found app directory, now build path to drivers
+            driver_path = os.path.join(current_dir, "utils", "drivers", driver_name)
+            if os.path.exists(driver_path):
+                return driver_path
+            break
+            
+        parent = os.path.dirname(current_dir)
+        if parent == current_dir:  # Reached root
+            break
+        current_dir = parent
+    
+    return None
 
 
 class ASCEScraper:

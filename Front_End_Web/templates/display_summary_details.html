@@ -147,11 +147,11 @@
 
         <!-- Action Buttons -->
         <div class="button-group">
-            <form method="POST" action="{{ url_for('save_summary_report') }}">
+            <form method="POST" action="{{ url_for('asce.save_summary_report') }}">
                 <button type="submit" class="btn save-btn">Save Report</button>
             </form>
-            <button onclick="window.location.href='{{ url_for('fetch_project_number_get') }}'" class="btn search-btn">Search Again</button>
-            <button onclick="window.location.href='{{ url_for('home') }}'" class="btn home-btn">Home</button>
+            <button onclick="window.location.href='{{ url_for('project.fetch_project_number_get') }}'" class="btn search-btn">Search Again</button>
+            <button onclick="window.location.href='{{ url_for('auth.home') }}'" class="btn home-btn">Home</button>
         </div>
 
         <!-- Loading indicator -->

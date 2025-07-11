@@ -25,8 +25,9 @@ class Config:
     PW = os.getenv('AHJ_P')
     AHJ_LINK = os.getenv('AHJ_INFO')
     AMEND_LINK = os.getenv('AMENDMENT_LINK')
-    BING_KEY = os.getenv('BING_API_KEY')
-    BING_ENDPOINT = os.getenv('BING_API_ENDPOINT')
+    GOOGLE_API_KEY = os.getenv('GOOGLE_API_KEY')
+    GOOGLE_SEARCH_ENGINE_ID = os.getenv('GOOGLE_SEARCH_ENGINE_ID')
+    GOOGLE_BASE_URL = os.getenv('GOOGLE_BASE_URL')
     
     # session configurations
     FLASK_ENV = os.getenv('FLASK_ENV', 'production')  # Default to production

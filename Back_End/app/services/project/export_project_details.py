@@ -25,12 +25,13 @@ def create_workbook():
     sheet = workbook.active
 
     # Define and insert headers directly into specified cells
+    # UPDATED: Removed 'J1': "Amendment PDF Links:" and moved Web Links from K1 to J1
     headers = {
         'A1': "Project ID:", 'A2': "Project Name:", 'A3': "Project PO #:", 'A4': "Project Address:",
         'A6': "Client:", 'A7': "Client Address:", 'A9': "Billing Contact:", 'A10': "Phone:", 'A11': "Email:",
         'B4': "Street 1", 'C4': "Street 2", 'D4': "City", 'E4': "State", 'F4': "Zip",
         'B7': "Street 1", 'C7': "Street 2", 'D7': "City", 'E7': "State", 'F7': "Zip",
-        'H1': "AHJ Jurisdiction:", 'I1': "AHJ Building Codes:", 'J1': "Amendment PDF Links:", 'K1': "Amendment Web Links:"
+        'H1': "AHJ Jurisdiction:", 'I1': "AHJ Building Codes:", 'J1': "Amendment Links:"  # Changed from K1 to J1
     }
 
     for cell, header in headers.items():
@@ -97,7 +98,9 @@ def auto_adjust_column_width(sheet):
 
 def insert_ahj_data(sheet, ahj_info, amendment_data):
     """
-    Inserts AHJ and amendment data into columns H, I, J, and K starting from row 2.
+    Inserts AHJ and amendment data into columns H, I, and J starting from row 2.
+    UPDATED: Removed PDF links insertion, consolidated all links into column J.
+    
     Args:
         sheet: The active sheet of the workbook.
         ahj_info: A list of dictionaries containing AHJ data.
@@ -109,20 +112,45 @@ def insert_ahj_data(sheet, ahj_info, amendment_data):
         sheet[f'H{row}'] = ahj.get('AHJ Name', '')
         sheet[f'I{row}'] = ahj.get('Building Code', '')
 
-    # Insert Amendment PDF Links in column J
-    for row, pdf_link in enumerate(amendment_data.get('pdf_links', []), start=2):
-        pdf_name = pdf_link.split('/')[-1]
+    # UPDATED: Combine all amendment links (both PDF and web) into column J
+    # Get all links from both pdf_links and web_links
+    all_links = []
+    
+    # Add PDF links with proper formatting
+    for pdf_link in amendment_data.get('pdf_links', []):
+        if isinstance(pdf_link, dict):
+            # If it's a dict with 'name' and 'url' keys (new format)
+            all_links.append({
+                'url': pdf_link.get('url', ''),
+                'name': pdf_link.get('name', pdf_link.get('url', '').split('/')[-1])
+            })
+        else:
+            # If it's a string (old format)
+            all_links.append({
+                'url': pdf_link,
+                'name': pdf_link.split('/')[-1]
+            })
+    
+    # Add web links with proper formatting
+    for web_link in amendment_data.get('web_links', []):
+        if isinstance(web_link, dict):
+            # If it's a dict with 'name' and 'url' keys (new format)
+            all_links.append({
+                'url': web_link.get('url', ''),
+                'name': web_link.get('name', web_link.get('url', '').split('/')[-1])
+            })
+        else:
+            # If it's a string (old format)
+            all_links.append({
+                'url': web_link,
+                'name': web_link.split('/')[-1]
+            })
+    
+    # Insert all links in column J (10th column)
+    for row, link in enumerate(all_links, start=2):
         cell = sheet.cell(row=row, column=10)  # Column J is the 10th column
-        cell.hyperlink = pdf_link
-        cell.value = pdf_name
-        cell.font = Font(color="0000FF", underline="single")  # Blue font to mimic a hyperlink
-
-    # Insert Amendment Web Links in column K
-    for row, web_link in enumerate(amendment_data.get('web_links', []), start=2):
-        web_name = web_link.split('/')[-1]
-        cell = sheet.cell(row=row, column=11)  # Column K is the 11th column
-        cell.hyperlink = web_link
-        cell.value = web_name
+        cell.hyperlink = link['url']
+        cell.value = link['name']
         cell.font = Font(color="0000FF", underline="single")  # Blue font to mimic a hyperlink
     
     logger.debug("AHJ and amendment data inserted successfully.")

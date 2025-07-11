@@ -1,0 +1,719 @@
+/* Progress Enhancement CSS - Add this to your existing CSS files */
+/* This enhances your current progress tracking without conflicting with existing styles */
+
+/* Enhanced progress notifications (floating notifications) */
+.progress-notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    max-width: 400px;
+    padding: 15px 20px;
+    border-radius: 8px;
+    color: white;
+    font-weight: 600;
+    z-index: 10001;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    word-wrap: break-word;
+    animation: slideInRight 0.3s ease-out;
+}
+
+@keyframes slideInRight {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+.progress-notification.success {
+    background: #059669;
+}
+
+.progress-notification.error {
+    background: #dc2626;
+}
+
+.progress-notification.warning {
+    background: #f59e0b;
+}
+
+.progress-notification.info {
+    background: #2563eb;
+}
+
+/* Enhanced step animations for better visual feedback */
+.progress-step.pending {
+    opacity: 0.6;
+}
+
+.progress-step.active .step-icon {
+    animation: pulse-icon 1.5s infinite;
+}
+
+@keyframes pulse-icon {
+    0%, 100% { 
+        transform: scale(1);
+        opacity: 1;
+    }
+    50% { 
+        transform: scale(1.1);
+        opacity: 0.8;
+    }
+}
+
+/* Improved progress bar with shimmer effect */
+.progress-fill::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    right: 0;
+    background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(255, 255, 255, 0.3),
+        transparent
+    );
+    animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+}
+
+.progress-fill {
+    position: relative;
+    overflow: hidden;
+}
+
+/* Connection status indicator (small, unobtrusive) */
+.connection-status {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 10px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-left: 10px;
+    opacity: 0.8;
+}
+
+.connection-status.connected {
+    background: rgba(16, 185, 129, 0.2);
+    color: #10b981;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.connection-status.active {
+    background: rgba(59, 130, 246, 0.2);
+    color: #3b82f6;
+    border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+.connection-status.disconnected {
+    background: rgba(239, 68, 68, 0.2);
+    color: #ef4444;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+/* Error state styling for progress components */
+.progress-step.error .step-icon {
+    animation: shake 0.5s ease-in-out;
+}
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    75% { transform: translateX(5px); }
+}
+
+/* Success state styling */
+.progress-step.completed .step-icon {
+    animation: bounce 0.6s ease-in-out;
+}
+
+@keyframes bounce {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.2); }
+}
+
+/* Loading text color transitions */
+#loading-text.success {
+    color: #10b981 !important;
+}
+
+#loading-text.error {
+    color: #ef4444 !important;
+}
+
+#loading-text.warning {
+    color: #f59e0b !important;
+}
+
+/* Responsive adjustments for notifications */
+@media (max-width: 768px) {
+    .progress-notification {
+        top: 10px;
+        right: 10px;
+        left: 10px;
+        max-width: none;
+    }
+}
+
+/* Accessibility improvements */
+@media (prefers-reduced-motion: reduce) {
+    .progress-fill::after,
+    .progress-step.active .step-icon,
+    .progress-step.error .step-icon,
+    .progress-step.completed .step-icon,
+    .progress-notification {
+        animation: none;
+    }
+    
+    .progress-step.active .step-status {
+        animation: none;
+    }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+    .progress-notification.success {
+        background: #00aa00;
+        border: 2px solid #ffffff;
+    }
+    
+    .progress-notification.error {
+        background: #cc0000;
+        border: 2px solid #ffffff;
+    }
+    
+    .progress-notification.warning {
+        background: #cc8800;
+        border: 2px solid #ffffff;
+    }
+    
+    .progress-notification.info {
+        background: #0066cc;
+        border: 2px solid #ffffff;
+    }
+}
+
+/* Print styles (hide notifications when printing) */
+@media print {
+    .progress-notification,
+    .connection-status {
+        display: none !important;
+    }
+}
+
+/* Single step progress styles (for select_asce_options.html when not in unified mode) */
+.single-progress {
+    margin-top: 20px;
+    padding: 25px;
+    background: #f8f9fa;
+    border-radius: 10px;
+    border: 1px solid #e9ecef;
+}
+
+.single-progress .progress-bar {
+    width: 100%;
+    height: 20px;
+    background: #e9ecef;
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 25px;
+}
+
+.single-progress .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #667eea, #764ba2);
+    width: 0%;
+    transition: width 0.3s ease;
+    border-radius: 10px;
+}
+
+.single-progress .progress-step {
+    text-align: center;
+    padding: 20px;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    background: white;
+    border: 2px solid #e9ecef;
+    margin-bottom: 20px;
+}
+
+.single-progress .progress-step.active {
+    background: #e3f2fd;
+    border-color: #2196F3;
+    transform: scale(1.05);
+}
+
+.single-progress .progress-step.completed {
+    background: #e8f5e8;
+    border-color: #4CAF50;
+}
+
+.single-progress .progress-step.error {
+    background: #ffebee;
+    border-color: #f44336;
+}
+
+.single-progress .step-icon {
+    font-size: 3em;
+    margin-bottom: 10px;
+}
+
+.single-progress .step-label {
+    font-weight: 600;
+    margin-bottom: 8px;
+    font-size: 1.1em;
+}
+
+.single-progress .step-status {
+    font-size: 2em;
+}
+
+/* Enhanced progress notifications (floating notifications) */
+.progress-notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    max-width: 400px;
+    padding: 15px 20px;
+    border-radius: 8px;
+    color: white;
+    font-weight: 600;
+    z-index: 10001;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    word-wrap: break-word;
+    animation: slideInRight 0.3s ease-out;
+}
+
+@keyframes slideInRight {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+.progress-notification.success {
+    background: #059669;
+}
+
+.progress-notification.error {
+    background: #dc2626;
+}
+
+.progress-notification.warning {
+    background: #f59e0b;
+}
+
+.progress-notification.info {
+    background: #2563eb;
+}
+
+/* Enhanced step animations for better visual feedback */
+.progress-step.pending {
+    opacity: 0.6;
+}
+
+.progress-step.active .step-icon {
+    animation: pulse-icon 1.5s infinite;
+}
+
+@keyframes pulse-icon {
+    0%, 100% { 
+        transform: scale(1);
+        opacity: 1;
+    }
+    50% { 
+        transform: scale(1.1);
+        opacity: 0.8;
+    }
+}
+
+/* Improved progress bar with shimmer effect */
+.progress-fill::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    right: 0;
+    background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(255, 255, 255, 0.3),
+        transparent
+    );
+    animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+}
+
+.progress-fill {
+    position: relative;
+    overflow: hidden;
+}
+
+/* Connection status indicator (small, unobtrusive) */
+.connection-status {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 10px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-left: 10px;
+    opacity: 0.8;
+}
+
+.connection-status.connected {
+    background: rgba(16, 185, 129, 0.2);
+    color: #10b981;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.connection-status.active {
+    background: rgba(59, 130, 246, 0.2);
+    color: #3b82f6;
+    border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+.connection-status.disconnected {
+    background: rgba(239, 68, 68, 0.2);
+    color: #ef4444;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+/* Error state styling for progress components */
+.progress-step.error .step-icon {
+    animation: shake 0.5s ease-in-out;
+}
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    75% { transform: translateX(5px); }
+}
+
+/* Success state styling */
+.progress-step.completed .step-icon {
+    animation: bounce 0.6s ease-in-out;
+}
+
+@keyframes bounce {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.2); }
+}
+
+/* Loading text color transitions */
+#loading-text.success {
+    color: #10b981 !important;
+}
+
+#loading-text.error {
+    color: #ef4444 !important;
+}
+
+#loading-text.warning {
+    color: #f59e0b !important;
+}
+
+/* Status color coding for progress steps */
+.progress-step.error .step-status {
+    color: #ef4444;
+}
+
+.progress-step.completed .step-status {
+    color: #22c55e;
+}
+
+.progress-step.active .step-status {
+    color: #3b82f6;
+    animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+/* Responsive adjustments for notifications */
+@media (max-width: 768px) {
+    .progress-notification {
+        top: 10px;
+        right: 10px;
+        left: 10px;
+        max-width: none;
+    }
+}
+
+/* Accessibility improvements */
+@media (prefers-reduced-motion: reduce) {
+    .progress-fill::after,
+    .progress-step.active .step-icon,
+    .progress-step.error .step-icon,
+    .progress-step.completed .step-icon,
+    .progress-notification {
+        animation: none;
+    }
+    
+    .progress-step.active .step-status {
+        animation: none;
+    }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+    .progress-notification.success {
+        background: #00aa00;
+        border: 2px solid #ffffff;
+    }
+    
+    .progress-notification.error {
+        background: #cc0000;
+        border: 2px solid #ffffff;
+    }
+    
+    .progress-notification.warning {
+        background: #cc8800;
+        border: 2px solid #ffffff;
+    }
+    
+    .progress-notification.info {
+        background: #0066cc;
+        border: 2px solid #ffffff;
+    }
+}
+
+/* Print styles (hide notifications when printing) */
+@media print {
+    .progress-notification,
+    .connection-status {
+        display: none !important;
+    }
+}
+.progress-notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    max-width: 400px;
+    padding: 15px 20px;
+    border-radius: 8px;
+    color: white;
+    font-weight: 600;
+    z-index: 10001;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    word-wrap: break-word;
+    animation: slideInRight 0.3s ease-out;
+}
+
+@keyframes slideInRight {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+.progress-notification.success {
+    background: #059669;
+}
+
+.progress-notification.error {
+    background: #dc2626;
+}
+
+.progress-notification.warning {
+    background: #f59e0b;
+}
+
+.progress-notification.info {
+    background: #2563eb;
+}
+
+/* Enhanced step animations for better visual feedback */
+.progress-step.pending {
+    opacity: 0.6;
+}
+
+.progress-step.active .step-icon {
+    animation: pulse-icon 1.5s infinite;
+}
+
+@keyframes pulse-icon {
+    0%, 100% { 
+        transform: scale(1);
+        opacity: 1;
+    }
+    50% { 
+        transform: scale(1.1);
+        opacity: 0.8;
+    }
+}
+
+/* Improved progress bar with shimmer effect */
+.progress-fill::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    right: 0;
+    background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(255, 255, 255, 0.3),
+        transparent
+    );
+    animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+}
+
+.progress-fill {
+    position: relative;
+    overflow: hidden;
+}
+
+/* Connection status indicator (small, unobtrusive) */
+.connection-status {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 10px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-left: 10px;
+    opacity: 0.8;
+}
+
+.connection-status.connected {
+    background: rgba(16, 185, 129, 0.2);
+    color: #10b981;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.connection-status.active {
+    background: rgba(59, 130, 246, 0.2);
+    color: #3b82f6;
+    border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+.connection-status.disconnected {
+    background: rgba(239, 68, 68, 0.2);
+    color: #ef4444;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+/* Error state styling for progress components */
+.progress-step.error .step-icon {
+    animation: shake 0.5s ease-in-out;
+}
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    75% { transform: translateX(5px); }
+}
+
+/* Success state styling */
+.progress-step.completed .step-icon {
+    animation: bounce 0.6s ease-in-out;
+}
+
+@keyframes bounce {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.2); }
+}
+
+/* Loading text color transitions */
+#loading-text.success {
+    color: #10b981 !important;
+}
+
+#loading-text.error {
+    color: #ef4444 !important;
+}
+
+#loading-text.warning {
+    color: #f59e0b !important;
+}
+
+/* Responsive adjustments for notifications */
+@media (max-width: 768px) {
+    .progress-notification {
+        top: 10px;
+        right: 10px;
+        left: 10px;
+        max-width: none;
+    }
+}
+
+/* Accessibility improvements */
+@media (prefers-reduced-motion: reduce) {
+    .progress-fill::after,
+    .progress-step.active .step-icon,
+    .progress-step.error .step-icon,
+    .progress-step.completed .step-icon,
+    .progress-notification {
+        animation: none;
+    }
+    
+    .progress-step.active .step-status {
+        animation: none;
+    }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+    .progress-notification.success {
+        background: #00aa00;
+        border: 2px solid #ffffff;
+    }
+    
+    .progress-notification.error {
+        background: #cc0000;
+        border: 2px solid #ffffff;
+    }
+    
+    .progress-notification.warning {
+        background: #cc8800;
+        border: 2px solid #ffffff;
+    }
+    
+    .progress-notification.info {
+        background: #0066cc;
+        border: 2px solid #ffffff;
+    }
+}
+
+/* Print styles (hide notifications when printing) */
+@media print {
+    .progress-notification,
+    .connection-status {
+        display: none !important;
+    }
+}

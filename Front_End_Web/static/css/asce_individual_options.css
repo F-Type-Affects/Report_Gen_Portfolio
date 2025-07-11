@@ -369,3 +369,22 @@ label {
         padding: 18px;
     }
 }
+/* Override progress-enhancements.css for ASCE loading indicator */
+/* Add this to the end of asce_individual_options.css */
+
+/* Fix white-on-white text issue by ensuring dark theme for loading indicator */
+#loading-indicator .single-progress {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+#loading-indicator .single-progress .progress-step {
+    background: rgba(255, 255, 255, 0.1);
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    color: white;
+}
+
+#loading-indicator .single-progress .step-label,
+#loading-indicator .single-progress .step-status {
+    color: white;
+}

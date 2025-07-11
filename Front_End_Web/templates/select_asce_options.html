@@ -6,10 +6,13 @@
     <title>Select ASCE Options</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/select_asce_options.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/flash_message.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/progress-enhancements.css') }}">
+    <script src="{{ url_for('static', filename='js/unified-progress-tracker.js') }}"></script>
 </head>
 <body>
     {% include 'flash_message.html' %}
-    <div class="container">
+    
+    <div class="container page-container" {% if progress_session_id %}data-progress-session-id="{{ progress_session_id }}"{% endif %}>
         {% if unified_mode %}
         <h2>All Web Scraping Reports - ASCE Configuration</h2>
         <div class="unified-info">
@@ -25,7 +28,7 @@
                 The ASCE Summary Table will be added to your existing AHJ Report.</p>
             </div>
             <p class="processing-note">
-                <strong>⏱️ Processing Time:</strong> This process typically takes 5-10 minutes to complete all reports.
+                <strong>⏱️ Processing Time:</strong> This process typically takes 8-12 minutes to complete all reports.
                 Please be patient and do not close the browser window.
             </p>
         </div>
@@ -85,65 +88,73 @@
             <div class="button-group">
                 {% if unified_mode %}
                 <!-- Unified mode: single button for all reports -->
-                <button type="submit" class="btn submit-btn unified-submit">
+                <button type="submit" class="btn submit-btn unified-submit" id="unifiedSubmitBtn">
                     🚀 Generate All Reports
                 </button>
-                {% elif request.path == url_for('generate_asce_summary') %}
+                {% elif request.path == url_for('asce.generate_asce_summary') %}
                 <!-- Individual ASCE Summary mode -->
-                <button type="submit" class="btn submit-btn">Generate Summary</button>
-                {% elif request.path == url_for('generate_asce_full_report') %}
+                <button type="submit" class="btn submit-btn" id="summarySubmitBtn">📊 Generate Summary</button>
+                {% elif request.path == url_for('asce.generate_asce_full_report') %}
                 <!-- Individual ASCE Full Report mode -->
-                <button type="submit" class="btn submit-btn full-report-btn">Generate Full Report</button>
+                <button type="submit" class="btn submit-btn full-report-btn" id="fullReportSubmitBtn">🔬 Generate Full Report</button>
                 {% else %}
                 <!-- Default mode: show both options -->
-                <button type="submit" class="btn submit-btn">Generate Summary</button>
-                <button type="submit" formaction="{{ url_for('generate_asce_full_report') }}" class="btn submit-btn full-report-btn">Generate Full Report</button>
+                <button type="submit" class="btn submit-btn" id="summarySubmitBtn">📊 Generate Summary</button>
+                <button type="submit" formaction="{{ url_for('asce.generate_asce_full_report') }}" class="btn submit-btn full-report-btn" id="fullReportSubmitBtn">🔬 Generate Full Report</button>
                 {% endif %}
-                <button type="button" onclick="window.location.href='{{ url_for('fetch_project_number_get') }}'" class="btn back-btn">Back</button>
-            </div>
-
-            <!-- Loading indicator -->
-            <div id="loading-indicator" style="display:none;">
-                {% if unified_mode %}
-                <p id="loading-text">Generating all reports, please wait...</p>
-                <div class="unified-progress">
-                    <div class="progress-bar">
-                        <div class="progress-fill" id="progressFill"></div>
-                    </div>
-                    <div class="progress-steps">
-                        <div class="progress-step" id="step-1">
-                            <div class="step-icon">🔬</div>
-                            <div class="step-label">ASCE Full Report</div>
-                            <div class="step-status">⏳</div>
-                        </div>
-                        <div class="progress-step" id="step-2">
-                            <div class="step-icon">🌍</div>
-                            <div class="step-label">Soil Survey</div>
-                            <div class="step-status">⏳</div>
-                        </div>
-                        <div class="progress-step" id="step-3">
-                            <div class="step-icon">📊</div>
-                            <div class="step-label">Summary Table</div>
-                            <div class="step-status">⏳</div>
-                        </div>
-                    </div>
-                    <p class="progress-note">
-                        Please keep this page open until all reports are complete.
-                        The process may take 5-10 minutes depending on server load.
-                    </p>
-                </div>
-                {% else %}
-                <p id="loading-text">
-                    {% if request.path == url_for('generate_asce_full_report') %}
-                    Downloading full report, please wait...
-                    {% else %}
-                    Scraping ASCE data, please wait...
-                    {% endif %}
-                </p>
-                {% endif %}
-                <div class="spinner"></div>
+                <button type="button" onclick="window.location.href='{{ url_for('project.fetch_project_number_get') }}'" class="btn back-btn">Back</button>
             </div>
         </form>
+
+        <!-- Enhanced Loading indicator (matches your CSS styling) -->
+        <div id="loading-indicator" style="display:none;">
+            {% if unified_mode %}
+            <p id="loading-text">Generating all reports, please wait...</p>
+            <div class="unified-progress">
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <div class="progress-steps">
+                    <div class="progress-step" id="step-1">
+                        <div class="step-icon">🔬</div>
+                        <div class="step-label">ASCE Full Report</div>
+                        <div class="step-status">⏳</div>
+                    </div>
+                    <div class="progress-step" id="step-2">
+                        <div class="step-icon">🌍</div>
+                        <div class="step-label">Soil Survey</div>
+                        <div class="step-status">⏳</div>
+                    </div>
+                    <div class="progress-step" id="step-3">
+                        <div class="step-icon">📊</div>
+                        <div class="step-label">Summary Table</div>
+                        <div class="step-status">⏳</div>
+                    </div>
+                </div>
+                <p class="progress-note">
+                    Please keep this page open until all reports are complete.
+                    The process may take 8-12 minutes depending on server load.
+                </p>
+            </div>
+            {% else %}
+            <p id="loading-text">Generating ASCE report, please wait...</p>
+            <div class="single-progress">
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <div class="progress-step" id="step-1">
+                    <div class="step-icon">🔬</div>
+                    <div class="step-label" id="stepLabel">ASCE Hazard Report</div>
+                    <div class="step-status">⏳</div>
+                </div>
+                <p class="progress-note">
+                    Please keep this page open until the report is complete.
+                    The process may take 3-8 minutes depending on server load.
+                </p>
+            </div>
+            {% endif %}
+            <div class="spinner"></div>
+        </div>
     </div>
 
     <script>
@@ -197,61 +208,124 @@
             });
         });
 
-        // Enhanced form submission handling for unified mode
-        document.getElementById('asceForm').addEventListener('submit', function(e) {
-            const loadingIndicator = document.getElementById('loading-indicator');
-            loadingIndicator.style.display = 'block';
+        // Enhanced form submission handling
+        document.addEventListener('DOMContentLoaded', function() {
+            const asceForm = document.getElementById('asceForm');
+            if (asceForm) {
+                asceForm.addEventListener('submit', function(e) {
+                    // Validate all required fields
+                    const standardVersion = document.getElementById('standards-selector').value;
+                    const riskCategory = document.getElementById('risk-category').value;
+                    const soilClass = document.getElementById('soil-class').value;
+                    
+                    if (!standardVersion || !riskCategory || !soilClass) {
+                        e.preventDefault();
+                        alert('Please select all required ASCE options before proceeding.');
+                        return false;
+                    }
+                    
+                    // Show loading indicator immediately
+                    const loadingIndicator = document.getElementById('loading-indicator');
+                    if (loadingIndicator) {
+                        loadingIndicator.style.display = 'block';
+                    }
+                    
+                    // Update step label for individual mode based on the action
+                    if (!unifiedMode) {
+                        const stepLabel = document.getElementById('stepLabel');
+                        const activeButton = e.submitter;
+                        
+                        if (activeButton && stepLabel) {
+                            if (activeButton.textContent.includes('Summary')) {
+                                stepLabel.textContent = 'ASCE Summary';
+                            } else if (activeButton.textContent.includes('Full Report')) {
+                                stepLabel.textContent = 'ASCE Full Report';
+                            }
+                        }
+                    }
+                    
+                    // Disable submit buttons to prevent double submission
+                    const submitBtns = this.querySelectorAll('button[type="submit"]');
+                    submitBtns.forEach(btn => {
+                        btn.disabled = true;
+                        if (btn === e.submitter) {
+                            btn.textContent = 'Generating...';
+                        }
+                    });
+                    
+                    console.log('ASCE form submitted - report generation starting');
+                    
+                    // Form will submit normally and server will handle the rest
+                    // Progress tracking will be initialized automatically when the page reloads with session ID
+                });
+            }
+
+            console.log('Select ASCE options page initialized');
+        });
+
+        // Custom progress tracking configuration
+        function initializeASCESelectProgressTracking() {
+            let reportType = 'ASCE Hazard Report';
+            let timeout = 600000; // 10 minutes default
+            let redirectUrl = '/';
             
             if (unifiedMode) {
-                // Start enhanced progress simulation for unified mode
-                simulateUnifiedProgress();
+                reportType = 'All Reports';
+                timeout = 900000; // 15 minutes for unified reports
+            } else {
+                // Determine report type from current path or form action
+                const path = window.location.pathname;
+                if (path.includes('asce_summary') || path.includes('generate_asce_summary')) {
+                    reportType = 'ASCE Summary';
+                    redirectUrl = '/display_asce_summary_results';
+                } else if (path.includes('asce_full_report') || path.includes('generate_asce_full_report')) {
+                    reportType = 'ASCE Full Report';
+                }
             }
-        });
-        
-        function simulateUnifiedProgress() {
-            const progressFill = document.getElementById('progressFill');
-            const steps = ['step-1', 'step-2', 'step-3'];
-            let currentStep = 0;
-            let progress = 0;
             
-            // Simulate overall progress bar
-            const progressInterval = setInterval(() => {
-                progress += Math.random() * 2 + 0.5; // Random increment
-                if (progress > 100) progress = 100;
-                
-                if (progressFill) {
-                    progressFill.style.width = progress + '%';
+            return initializeProgressTracking({
+                reportType: reportType,
+                timeout: timeout,
+                redirectUrl: redirectUrl,
+                onSuccess: function(data) {
+                    console.log(`${reportType} generated successfully:`, data);
+                },
+                onError: function(data) {
+                    console.error(`${reportType} generation failed:`, data);
+                    // Re-enable form buttons if there was an error
+                    const submitBtns = document.querySelectorAll('#asceForm button[type="submit"]');
+                    submitBtns.forEach(btn => {
+                        btn.disabled = false;
+                        if (btn.textContent === 'Generating...') {
+                            // Restore original text
+                            if (btn.id === 'unifiedSubmitBtn') {
+                                btn.textContent = '🚀 Generate All Reports';
+                            } else if (btn.id === 'summarySubmitBtn') {
+                                btn.textContent = '📊 Generate Summary';
+                            } else if (btn.id === 'fullReportSubmitBtn') {
+                                btn.textContent = '🔬 Generate Full Report';
+                            } else {
+                                btn.textContent = 'Generate Report';
+                            }
+                        }
+                    });
                 }
-                
-                if (progress >= 100) {
-                    clearInterval(progressInterval);
-                }
-            }, 1000);
-            
-            // Simulate step progress
-            const stepInterval = setInterval(() => {
-                if (currentStep < steps.length) {
-                    const stepElement = document.getElementById(steps[currentStep]);
-                    const statusElement = stepElement.querySelector('.step-status');
-                    
-                    // Mark current step as in progress
-                    statusElement.textContent = '🔄';
-                    stepElement.classList.add('active');
-                    
-                    // Simulate completion after a realistic delay
-                    const completionTime = Math.random() * 60000 + 90000; // 1.5-2.5 minutes per step
-                    setTimeout(() => {
-                        statusElement.textContent = '✅';
-                        stepElement.classList.remove('active');
-                        stepElement.classList.add('completed');
-                    }, completionTime);
-                    
-                    currentStep++;
-                } else {
-                    clearInterval(stepInterval);
-                }
-            }, 5000); // Start new step every 5 seconds
+            });
         }
+
+        // Initialize progress tracking when DOM is ready
+        document.addEventListener('DOMContentLoaded', function() {
+            // Small delay to ensure proper initialization
+            setTimeout(() => {
+                if (document.querySelector('.page-container[data-progress-session-id]')) {
+                    // Clean up any existing tracker and initialize with our custom config
+                    if (window.globalProgressTracker) {
+                        cleanupProgressTracking();
+                    }
+                    initializeASCESelectProgressTracking();
+                }
+            }, 100);
+        });
     </script>
 </body>
 </html>

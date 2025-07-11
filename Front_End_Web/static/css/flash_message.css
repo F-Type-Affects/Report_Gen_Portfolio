@@ -1,13 +1,48 @@
-/* static/css/flash_messages.css */
+/* static/css/flash_message.css */
+#flash-container {
+    position: fixed;
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 90%;
+    max-width: 800px;
+    z-index: 1000;
+}
+
 .flash-message {
     width: 100%;
-    padding: 15px;
+    padding: 15px 40px 15px 15px;
     margin: 10px 0;
     border-radius: 5px;
     font-size: 1.1rem;
     text-align: center;
     position: relative;
     animation: slideDown 0.5s ease-out;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.flash-message p {
+    margin: 0;
+}
+
+/* Close button */
+.flash-close {
+    position: absolute;
+    top: 50%;
+    right: 10px;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: inherit;
+    opacity: 0.7;
+    padding: 0 5px;
+    line-height: 1;
+}
+
+.flash-close:hover {
+    opacity: 1;
 }
 
 .flash-error {
@@ -43,4 +78,20 @@
         transform: translateY(0);
         opacity: 1;
     }
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(0);
+        opacity: 1;
+    }
+    to {
+        transform: translateY(-100%);
+        opacity: 0;
+    }
+}
+
+/* Ensure body has padding to prevent flash messages from covering content */
+body {
+    padding-top: 20px;
 }

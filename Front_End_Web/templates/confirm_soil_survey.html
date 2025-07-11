@@ -6,12 +6,14 @@
     <title>Confirm Soil Survey Reports</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/confirm_soil_survey.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/flash_message.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/progress-enhancements.css') }}">
+    <script src="{{ url_for('static', filename='js/unified-progress-tracker.js') }}"></script>
 </head>
 <body>
     {% include 'flash_message.html' %}
     
     <div class="page-container" {% if progress_session_id %}data-progress-session-id="{{ progress_session_id }}"{% endif %}>
-        <!-- Centered Red Title -->
+        <!-- Centered Header -->
         <header class="page-header">
             <h1>Confirm Soil Survey Reports</h1>
         </header>
@@ -50,20 +52,22 @@
                 <div class="card-content">
                     <p class="survey-description">You are about to generate the following USDA soil reports:</p>
                     <ul class="report-list">
-                        <li>Linear Extensibility Report</li>
-                        <li>Unified Soil Classification Report</li>
+                        <li>📄 <strong>Linear Extensibility Report</strong> - Soil expansion characteristics</li>
+                        <li>📄 <strong>Unified Soil Classification Report</strong> - Engineering soil properties</li>
                     </ul>
-                    <p class="process-note">This process may take several minutes. Please do not close your browser.</p>
+                    <div class="process-note">
+                        <p><strong>⏱️ Processing Time:</strong> This process typically takes 5-8 minutes. Please do not close your browser during generation.</p>
+                    </div>
                 </div>
             </div>
 
             <!-- Action Buttons -->
             <div class="action-section">
-                <form method="POST" action="{{ request.path }}" class="confirm-form">
-                    <button type="submit" class="btn btn-primary">
+                <form method="POST" action="{{ request.path }}" class="confirm-form" id="soilForm">
+                    <button type="submit" class="btn btn-primary" id="generateBtn">
                         🌍 Generate Reports
                     </button>
-                    <button type="button" onclick="window.location.href='{{ url_for('fetch_project_number_get') }}'" class="btn btn-secondary">
+                    <button type="button" onclick="window.location.href='{{ url_for('project.fetch_project_number_get') }}'" class="btn btn-secondary">
                         Cancel
                     </button>
                 </form>
@@ -71,7 +75,7 @@
         </div>
     </div>
 
-    <!-- Loading indicator for progress tracking -->
+    <!-- Loading indicator for soil survey progress (matches existing CSS) -->
     <div id="loading-indicator" style="display:none;">
         <p id="loading-text">Generating soil survey reports, please wait...</p>
         <div class="single-progress">
@@ -85,287 +89,79 @@
             </div>
             <p class="progress-note">
                 Please keep this page open until the reports are complete.
-                The process may take 3-7 minutes depending on server load.
+                The process may take 5-8 minutes depending on server load.
             </p>
         </div>
         <div class="spinner"></div>
     </div>
 
-    <!-- Progress tracking JavaScript -->
+    <!-- Include the unified progress tracking script -->
+    <script src="{{ url_for('static', filename='js/unified-progress-tracker.js') }}"></script>
+    
     <script>
-        class SingleStepProgressTracker {
-            constructor(sessionId, reportType) {
-                this.sessionId = sessionId;
-                this.reportType = reportType;
-                this.eventSource = null;
-                this.isTracking = false;
-                this.elements = {
-                    progressFill: document.getElementById('progressFill'),
-                    loadingText: document.getElementById('loading-text'),
-                    step: document.getElementById('step-1')
-                };
-            }
-
-            startTracking() {
-                if (this.isTracking || !this.sessionId) return;
-                
-                this.isTracking = true;
-                console.log(`Starting progress tracking for ${this.reportType} session: ${this.sessionId}`);
-                
-                // Initialize Server-Sent Events connection
-                this.eventSource = new EventSource(`/progress/${this.sessionId}`);
-                
-                this.eventSource.onmessage = (event) => {
-                    try {
-                        const data = JSON.parse(event.data);
-                        this.updateProgress(data);
-                    } catch (error) {
-                        console.error('Error parsing progress data:', error);
-                    }
-                };
-                
-                this.eventSource.onerror = (error) => {
-                    console.error('EventSource error:', error);
-                    this.handleConnectionError();
-                };
-                
-                // Fallback timeout (shorter for individual reports)
-                setTimeout(() => {
-                    if (this.isTracking) {
-                        this.handleTimeout();
-                    }
-                }, 480000); // 8 minutes timeout
-            }
-
-            updateProgress(data) {
-                console.log('Progress update:', data);
-                
-                switch (data.status) {
-                    case 'starting':
-                    case 'in_progress':
-                        this.updateInProgress(data);
-                        break;
-                    case 'completed':
-                        this.updateCompleted(data);
-                        break;
-                    case 'error':
-                        this.updateError(data);
-                        break;
-                }
-            }
-
-            updateInProgress(data) {
-                // Update progress bar
-                if (this.elements.progressFill) {
-                    this.elements.progressFill.style.width = `${data.overall_progress}%`;
-                }
-                
-                // Update loading text
-                if (this.elements.loadingText && data.message) {
-                    this.elements.loadingText.textContent = data.message;
-                }
-                
-                // Update step status
-                if (data.steps && data.steps[0]) {
-                    this.updateStepStatus(data.steps[0]);
-                }
-            }
-
-            updateStepStatus(stepData) {
-                if (!this.elements.step) return;
-                
-                const statusElement = this.elements.step.querySelector('.step-status');
-                if (!statusElement) return;
-                
-                // Remove existing classes
-                this.elements.step.classList.remove('active', 'completed', 'error');
-                
-                // Update based on step status
-                switch (stepData.status) {
-                    case 'in_progress':
-                        this.elements.step.classList.add('active');
-                        statusElement.textContent = '🔄';
-                        break;
-                    case 'completed':
-                        this.elements.step.classList.add('completed');
-                        statusElement.textContent = '✅';
-                        break;
-                    case 'error':
-                        this.elements.step.classList.add('error');
-                        statusElement.textContent = '❌';
-                        break;
-                    default:
-                        statusElement.textContent = '⏳';
-                        break;
-                }
-            }
-
-            updateCompleted(data) {
-                // Update final progress
-                if (this.elements.progressFill) {
-                    this.elements.progressFill.style.width = '100%';
-                }
-                
-                if (this.elements.loadingText) {
-                    this.elements.loadingText.textContent = data.message || `${this.reportType} completed successfully!`;
-                }
-                
-                // Mark step as completed
-                if (data.steps && data.steps[0]) {
-                    this.updateStepStatus(data.steps[0]);
-                }
-                
-                // Auto-redirect after success
-                setTimeout(() => {
-                    this.showSuccessMessage();
-                }, 2000);
-                
-                this.stopTracking();
-            }
-
-            updateError(data) {
-                console.error('Progress tracking error:', data.error);
-                
-                if (this.elements.loadingText) {
-                    this.elements.loadingText.textContent = data.message || `An error occurred during ${this.reportType} generation`;
-                    this.elements.loadingText.style.color = '#dc2626';
-                }
-                
-                // Mark step as error
-                if (this.elements.step) {
-                    this.updateStepStatus({ status: 'error' });
-                }
-                
-                this.showErrorMessage(data.error || 'Unknown error occurred');
-                this.stopTracking();
-            }
-
-            handleConnectionError() {
-                console.error('Lost connection to progress stream');
-                if (this.elements.loadingText) {
-                    this.elements.loadingText.textContent = `Connection lost. ${this.reportType} may still be processing...`;
-                    this.elements.loadingText.style.color = '#f59e0b';
-                }
-            }
-
-            handleTimeout() {
-                console.warn('Progress tracking timeout');
-                if (this.elements.loadingText) {
-                    this.elements.loadingText.textContent = `${this.reportType} is taking longer than expected...`;
-                    this.elements.loadingText.style.color = '#f59e0b';
-                }
-            }
-
-            showSuccessMessage() {
-                // Create and show success notification
-                const notification = document.createElement('div');
-                notification.style.cssText = `
-                    position: fixed;
-                    top: 20px;
-                    right: 20px;
-                    background: #059669;
-                    color: white;
-                    padding: 15px 20px;
-                    border-radius: 8px;
-                    box-shadow: 0 4px 15px rgba(5, 150, 105, 0.3);
-                    z-index: 10001;
-                    font-weight: 600;
-                `;
-                notification.textContent = `${this.reportType} generated successfully! Redirecting...`;
-                document.body.appendChild(notification);
-                
-                // Redirect to home after showing message
-                setTimeout(() => {
-                    window.location.href = '/';
-                }, 3000);
-            }
-
-            showErrorMessage(error) {
-                // Create and show error notification
-                const notification = document.createElement('div');
-                notification.style.cssText = `
-                    position: fixed;
-                    top: 20px;
-                    right: 20px;
-                    background: #dc2626;
-                    color: white;
-                    padding: 15px 20px;
-                    border-radius: 8px;
-                    box-shadow: 0 4px 15px rgba(220, 38, 38, 0.3);
-                    z-index: 10001;
-                    font-weight: 600;
-                    max-width: 400px;
-                `;
-                notification.innerHTML = `
-                    <div>${this.reportType} generation failed!</div>
-                    <div style="font-size: 14px; margin-top: 5px; opacity: 0.9;">${error}</div>
-                    <button onclick="this.parentElement.remove()" style="margin-top: 10px; background: rgba(255,255,255,0.2); border: none; color: white; padding: 5px 10px; border-radius: 4px; cursor: pointer;">Close</button>
-                `;
-                document.body.appendChild(notification);
-                
-                // Auto-remove after 10 seconds
-                setTimeout(() => {
-                    if (notification.parentElement) {
-                        notification.remove();
-                    }
-                }, 10000);
-            }
-
-            stopTracking() {
-                if (this.eventSource) {
-                    this.eventSource.close();
-                    this.eventSource = null;
-                }
-                this.isTracking = false;
-                console.log('Progress tracking stopped');
-            }
-        }
-
-        // Global progress tracker instance
-        let progressTracker = null;
-
-        // Initialize when page loads
+        // Initialize form interactions
         document.addEventListener('DOMContentLoaded', function() {
-            // Check if we have a progress session ID
-            const pageContainer = document.querySelector('.page-container');
-            const sessionId = pageContainer ? pageContainer.getAttribute('data-progress-session-id') : null;
-            
-            if (sessionId) {
-                console.log('Found existing session ID:', sessionId);
-                // Show loading indicator immediately
-                const loadingIndicator = document.getElementById('loading-indicator');
-                if (loadingIndicator) {
-                    loadingIndicator.style.display = 'block';
-                }
-                
-                // Start progress tracking
-                progressTracker = new SingleStepProgressTracker(sessionId, 'USDA Soil Survey');
-                progressTracker.startTracking();
-            }
-
-            // Form submission handling
-            const forms = document.querySelectorAll('form');
-            forms.forEach(form => {
-                // Skip if it's not a report generation form
-                if (!form.action.includes('asce') && !form.action.includes('soil')) return;
-                
-                form.addEventListener('submit', function(e) {
-                    // Show loading indicator
+            // Enhanced form submission handling
+            const soilForm = document.getElementById('soilForm');
+            if (soilForm) {
+                soilForm.addEventListener('submit', function(e) {
+                    console.log('Soil survey form submitted');
+                    
+                    // Show loading indicator immediately
                     const loadingIndicator = document.getElementById('loading-indicator');
                     if (loadingIndicator) {
                         loadingIndicator.style.display = 'block';
                     }
                     
+                    // Disable the generate button to prevent double submission
+                    const generateBtn = document.getElementById('generateBtn');
+                    if (generateBtn) {
+                        generateBtn.disabled = true;
+                        generateBtn.textContent = 'Generating Reports...';
+                    }
+                    
+                    console.log('Soil survey generation starting');
+                    
                     // Form will submit normally and server will handle the rest
                 });
-            });
+            }
+
+            console.log('Soil survey confirmation page initialized');
         });
 
-        // Cleanup on page unload
-        window.addEventListener('beforeunload', function() {
-            if (progressTracker) {
-                progressTracker.stopTracking();
-            }
+        // Custom progress tracking configuration for soil survey
+        function initializeSoilProgressTracking() {
+            return initializeProgressTracking({
+                reportType: 'USDA Soil Survey',
+                timeout: 600000, // 10 minutes for soil survey
+                redirectUrl: '/', // Redirect to home page on completion
+                onSuccess: function(data) {
+                    console.log('Soil survey reports generated successfully:', data);
+                },
+                onError: function(data) {
+                    console.error('Soil survey generation failed:', data);
+                    // Re-enable the generate button if there was an error
+                    const generateBtn = document.getElementById('generateBtn');
+                    if (generateBtn) {
+                        generateBtn.disabled = false;
+                        generateBtn.textContent = '🌍 Generate Reports';
+                    }
+                }
+            });
+        }
+
+        // Initialize progress tracking when DOM is ready
+        document.addEventListener('DOMContentLoaded', function() {
+            // Small delay to ensure proper initialization
+            setTimeout(() => {
+                if (document.querySelector('.page-container[data-progress-session-id]')) {
+                    // Clean up any existing tracker and initialize with our custom config
+                    if (window.globalProgressTracker) {
+                        cleanupProgressTracking();
+                    }
+                    initializeSoilProgressTracking();
+                }
+            }, 100);
         });
     </script>
 </body>

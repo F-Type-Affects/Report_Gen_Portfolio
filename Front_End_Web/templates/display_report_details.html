@@ -113,55 +113,41 @@
             </div>
         </div>
 
-        <!-- Bottom Row: Amendment Links -->
+        <!-- Bottom Row: Amendment Links (Unified) -->
         <div class="bottom-section">
-            <!-- Amendment PDF Links Card -->
-            <div class="links-card pdf-links-card">
+            <!-- Single Amendment Links Card spanning full width -->
+            <div class="links-card amendment-links-card" style="grid-column: 1 / -1;">
                 <div class="card-header">
-                    <h2>📄 Amendment PDF Links</h2>
+                    <h2>📚 Building Code Amendments & Resources</h2>
                 </div>
                 <div class="card-content">
-                    {% if amendment_pdf_links and amendment_pdf_links|length > 0 %}
+                    {% if amendment_links and amendment_links|length > 0 %}
                         <div class="links-container">
-                            {% for link in amendment_pdf_links %}
+                            {% for link in amendment_links %}
                             <div class="link-item">
-                                <a href="{{ link }}" target="_blank" class="pdf-link">
-                                    <span class="link-icon">📄</span>
-                                    <span class="link-text">{{ link.split('/')[-1] if '/' in link else 'PDF Document' }}</span>
+                                <a href="{{ link.url }}" target="_blank" class="web-link">
+                                    <!-- Use PDF icon for PDFs, web icon for others -->
+                                    <span class="link-icon">
+                                        {% if link.file_format == 'PDF' or link.url.lower().endswith('.pdf') %}
+                                            📄
+                                        {% else %}
+                                            🌐
+                                        {% endif %}
+                                    </span>
+                                    <span class="link-text">
+                                        {{ link.name if link.name else (link.url.split('/')[-1] if '/' in link.url else 'Resource') }}
+                                    </span>
                                     <span class="external-icon">🔗</span>
                                 </a>
                             </div>
                             {% endfor %}
                         </div>
-                    {% else %}
-                        <div class="no-data">
-                            <p>No PDF amendment links found</p>
-                        </div>
-                    {% endif %}
-                </div>
-            </div>
-
-            <!-- Amendment Web Links Card -->
-            <div class="links-card web-links-card">
-                <div class="card-header">
-                    <h2>🌐 Amendment Web Links</h2>
-                </div>
-                <div class="card-content">
-                    {% if amendment_web_links and amendment_web_links|length > 0 %}
-                        <div class="links-container">
-                            {% for link in amendment_web_links %}
-                            <div class="link-item">
-                                <a href="{{ link }}" target="_blank" class="web-link">
-                                    <span class="link-icon">🌐</span>
-                                    <span class="link-text">{{ link.split('/')[-1] if '/' in link else 'Web Resource' }}</span>
-                                    <span class="external-icon">🔗</span>
-                                </a>
-                            </div>
-                            {% endfor %}
+                        <div style="margin-top: 10px; font-size: 12px; color: #6b7280; font-style: italic;">
+                            Found {{ amendment_links|length }} resource{{ 's' if amendment_links|length != 1 else '' }} (ranked by relevance)
                         </div>
                     {% else %}
                         <div class="no-data">
-                            <p>No web amendment links found</p>
+                            <p>No amendment links found</p>
                         </div>
                     {% endif %}
                 </div>
@@ -170,11 +156,11 @@
 
         <!-- Action Buttons -->
         <div class="action-section">
-            <form method="POST" action="{{ url_for('export_report_post') }}" class="export-form">
+            <form method="POST" action="{{ url_for('ahj.export_report_post') }}" class="export-form">
                 <button type="submit" class="btn btn-primary">
                     📊 Export Report
                 </button>
-                <button type="button" onclick="window.location.href='{{ url_for('fetch_project_number_get') }}'" class="btn btn-secondary">
+                <button type="button" onclick="window.location.href='{{ url_for('project.fetch_project_number_get') }}'" class="btn btn-secondary">
                     ← Back
                 </button>
             </form>

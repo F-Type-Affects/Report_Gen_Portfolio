@@ -26,8 +26,8 @@
     
     <div class="container">
         <nav class="sidebar">
-            <a href="{{ url_for('login') }}" class="btn">Login & Authenticate</a>
-            <a href="{{ url_for('select_user_email_get') }}?next=select_project_number" class="btn">Generate Project Reports</a>
+            <a href="{{ url_for('auth.login') }}" class="btn">Login & Authenticate</a>
+            <a href="{{ url_for('auth.select_user_email_get') }}?next=project.fetch_project_number" class="btn">Generate Project Reports</a>
             <button onclick="exitApp()" class="btn">Clear Session Data</button>
         </nav>
         
@@ -162,7 +162,7 @@
     <!-- Close Browser window on exit -->
     <script>
         function exitApp() {
-            fetch('/exit_app')
+            fetch('{{ url_for("auth.exit_app") }}')
                 .then(response => {
                     if (response.ok) {
                         window.close();

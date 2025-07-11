@@ -80,7 +80,7 @@
                     </button>
                     
                     <!-- 7. Back Button -->
-                    <button type="button" onclick="window.location.href='{{ url_for('select_user_email_get') }}'" class="action-btn btn-back">
+                    <button type="button" onclick="window.location.href='{{ url_for('auth.select_user_email_get') }}'" class="action-btn btn-back">
                         <span class="btn-icon">←</span>
                         <span class="btn-text">Back</span>
                     </button>
@@ -127,20 +127,20 @@
 
             // Handle different form actions
             if (action === 'generate_ahj_report') {
-                form.action = "{{ url_for('generate_ahj_report') }}";
+                form.action = "{{ url_for('ahj.generate_ahj_report') }}";
             } else if (action === 'generate_cover_letter') {
-                form.action = "{{ url_for('generate_cover_letter_route') }}";
+                form.action = "{{ url_for('cover_letter.generate_cover_letter_route') }}";
             } else if (action === 'generate_asce_summary') {
-                window.location.href = "{{ url_for('generate_asce_summary') }}?project_number=" + projectNumber;
+                window.location.href = "{{ url_for('asce.generate_asce_summary') }}?project_number=" + projectNumber;
                 return;
             } else if (action === 'generate_asce_full_report') {
-                window.location.href = "{{ url_for('generate_asce_full_report') }}?project_number=" + projectNumber;
+                window.location.href = "{{ url_for('asce.generate_asce_full_report') }}?project_number=" + projectNumber;
                 return;
             } else if (action === 'generate_soil_survey') {
-                window.location.href = "{{ url_for('generate_soil_survey') }}?project_number=" + projectNumber;
+                window.location.href = "{{ url_for('soil.generate_soil_survey') }}?project_number=" + projectNumber;
                 return;
             } else if (action === 'generate_all_reports') {
-                window.location.href = "{{ url_for('generate_all_reports') }}?project_number=" + projectNumber;
+                window.location.href = "{{ url_for('workflow.generate_all_reports') }}?project_number=" + projectNumber;
                 return;
             }
             
