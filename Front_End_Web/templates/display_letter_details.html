@@ -1,30 +1,241 @@
-<!-- display_letter_details.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Confirm Letter Details</title>
+    <title>Confirm Cover Letter Details</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/display_letter_details.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/flash_message.css') }}">
 </head>
 <body>
     {% include 'flash_message.html' %}
-    <header>
-        <h1>Confirm Letter Details</h1>
-    </header>
-    <div class="container">
-        <p><strong>Project Name:</strong> {{ project_data['name'] }}</p>
-        <p><strong>Project Address:</strong> {{ project_data['street1'] }} {{ project_data['street2'] }}, {{ project_data['city'] }}, {{ project_data['state'] }} {{ project_data['zip_code'] }}</p>
-        <p><strong>Client Name:</strong> {{ client_data['client_name'] }}</p>
-        <p><strong>Project Number:</strong> {{ project_data['code'] }}</p>
-        <p><strong>By:</strong> {{ first_name }} {{ last_name }}</p>
+    
+    <div class="page-container">
+        <header class="page-header">
+            <h1>Confirm Cover Letter Details</h1>
+            {% if template_info %}
+            <div class="template-info">
+                <span class="template-label">Selected Template:</span>
+                <span class="template-name">{{ template_info.display_name }}</span>
+            </div>
+            {% endif %}
+        </header>
         
-        <form method="POST" action="{{ url_for('cover_letter.generate_cover_letter_confirmed') }}">
-            <button type="submit">Confirm</button>
-            <button type="button" onclick="window.location.href='{{ url_for('project.fetch_project_number_get') }}'">Search Again</button>
-            <button type="button" onclick="window.location.href='{{ url_for('auth.home') }}'">Home</button>
-        </form>
+        <div class="main-container">
+            <div class="details-grid">
+                <!-- Project Information -->
+                <div class="info-section">
+                    <h2 class="section-title">
+                        <span class="section-icon">🏗️</span>
+                        Project Information
+                    </h2>
+                    <div class="info-item">
+                        <span class="info-label">Project Name:</span>
+                        <span class="info-value">{{ project_data.name }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Project Number:</span>
+                        <span class="info-value">{{ project_data.code }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Project Address:</span>
+                        <span class="info-value">
+                            {{ project_data.street1 }}
+                            {% if project_data.street2 %} {{ project_data.street2 }}{% endif %},
+                            {{ project_data.city }}, {{ project_data.state }} {{ project_data.zip_code }}
+                        </span>
+                    </div>
+                </div>
+                
+                <!-- Client Information -->
+                <div class="info-section">
+                    <h2 class="section-title">
+                        <span class="section-icon">🏢</span>
+                        Client Information
+                    </h2>
+                    <div class="info-item">
+                        <span class="info-label">Client Name:</span>
+                        <span class="info-value">{{ client_data.client_name }}</span>
+                    </div>
+                    {% if template_info and template_info.client_format == 'separate_fields' %}
+                    <div class="info-item">
+                        <span class="info-label">Client Address:</span>
+                        <span class="info-value">
+                            {{ client_data.street1 }}
+                            {% if client_data.street2 %} {{ client_data.street2 }}{% endif %},
+                            {{ client_data.city }}, {{ client_data.state }} {{ client_data.zip_code }}
+                        </span>
+                    </div>
+                    {% endif %}
+                    {% if client_data.client_phone %}
+                    <div class="info-item">
+                        <span class="info-label">Phone:</span>
+                        <span class="info-value">{{ client_data.client_phone }}</span>
+                    </div>
+                    {% endif %}
+                    {% if client_data.client_email %}
+                    <div class="info-item">
+                        <span class="info-label">Email:</span>
+                        <span class="info-value">{{ client_data.client_email }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <!-- Template & Engineer Information -->
+                <div class="info-section">
+                    <h2 class="section-title">
+                        <span class="section-icon">📋</span>
+                        Template & Engineer Information
+                    </h2>
+                    {% if template_info %}
+                    <div class="info-item">
+                        <span class="info-label">Template:</span>
+                        <span class="info-value">{{ template_info.display_name }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Description:</span>
+                        <span class="info-value">{{ template_info.description }}</span>
+                    </div>
+                    {% endif %}
+                    
+                    {% if template_info and template_info.has_pool_standard %}
+                    <div class="info-item">
+                        <span class="info-label">Pool Standard:</span>
+                        <span class="info-value pool-standard">{{ pool_standard }}</span>
+                    </div>
+                    {% endif %}
+                    
+                    {% if template_info and template_info.has_engineer_initials %}
+                    <div class="info-item">
+                        <span class="info-label">Engineer Initials:</span>
+                        <span class="info-value engineer-initials">{{ engineer_initials }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Checked By:</span>
+                        <span class="info-value">J. Light, SE</span>
+                    </div>
+                    {% else %}
+                    <div class="info-item">
+                        <span class="info-label">Created By:</span>
+                        <span class="info-value">{{ first_name }} {{ last_name }}</span>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="info-item">
+                        <span class="info-label">Date:</span>
+                        <span class="info-value">{{ current_date }}</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Template Preview -->
+            {% if template_info %}
+            <div class="template-preview">
+                <h3>Template Preview</h3>
+                <div class="preview-content">
+                    <div class="preview-field">
+                        <span class="preview-label">Project:</span>
+                        <span class="preview-value">{{ project_data.name }}</span>
+                    </div>
+                    <div class="preview-field">
+                        <span class="preview-label">Location:</span>
+                        <span class="preview-value">
+                            {{ project_data.street1 }}
+                            {% if project_data.street2 %} {{ project_data.street2 }}{% endif %},
+                            {{ project_data.city }}, {{ project_data.state }} {{ project_data.zip_code }}
+                        </span>
+                    </div>
+                    <div class="preview-field">
+                        <span class="preview-label">Client:</span>
+                        <span class="preview-value">{{ client_data.client_name }}</span>
+                    </div>
+                    {% if template_info.client_format == 'separate_fields' %}
+                    <div class="preview-field">
+                        <span class="preview-label">Client Address:</span>
+                        <span class="preview-value">
+                            {{ client_data.street1 }}
+                            {% if client_data.street2 %} {{ client_data.street2 }}{% endif %},
+                            {{ client_data.city }}, {{ client_data.state }} {{ client_data.zip_code }}
+                        </span>
+                    </div>
+                    {% endif %}
+                    <div class="preview-field">
+                        <span class="preview-label">Job No:</span>
+                        <span class="preview-value">{{ project_data.code }}</span>
+                    </div>
+                    {% if template_info.has_pool_standard %}
+                    <div class="preview-field">
+                        <span class="preview-label">Standard:</span>
+                        <span class="preview-value">{{ pool_standard }}</span>
+                    </div>
+                    {% endif %}
+                    <div class="preview-field">
+                        <span class="preview-label">By:</span>
+                        <span class="preview-value">
+                            {% if template_info.has_engineer_initials %}
+                                {{ engineer_initials }}
+                            {% else %}
+                                {{ first_name }} {{ last_name }}
+                            {% endif %}
+                        </span>
+                    </div>
+                    {% if template_info.has_checked_by %}
+                    <div class="preview-field">
+                        <span class="preview-label">Checked By:</span>
+                        <span class="preview-value">J. Light, SE</span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- Action Buttons -->
+            <div class="action-buttons">
+                <form method="POST" action="{{ url_for('cover_letter.generate_cover_letter_with_template') }}">
+                    <!-- Carry forward all the template and data information -->
+                    {% if template_info %}
+                    <input type="hidden" name="template_id" value="{{ template_info.template_id }}">
+                    {% endif %}
+                    {% if engineer_initials %}
+                    <input type="hidden" name="engineer_initials" value="{{ engineer_initials }}">
+                    {% endif %}
+                    {% if pool_standard %}
+                    <input type="hidden" name="pool_standard" value="{{ pool_standard }}">
+                    {% endif %}
+                    
+                    <button type="submit" class="btn btn-primary">
+                        <span class="btn-icon">✓</span>
+                        Generate Cover Letter
+                    </button>
+                </form>
+                
+                <button type="button" onclick="window.location.href='{{ url_for('cover_letter.select_cover_letter_template') }}'" class="btn btn-secondary">
+                    <span class="btn-icon">←</span>
+                    Change Template
+                </button>
+                
+                <button type="button" onclick="window.location.href='{{ url_for('project.fetch_project_number_get') }}'" class="btn btn-tertiary">
+                    <span class="btn-icon">🏠</span>
+                    Back to Project Selection
+                </button>
+            </div>
+        </div>
     </div>
+    
+    <script>
+        // Add current date display
+        document.addEventListener('DOMContentLoaded', function() {
+            const now = new Date();
+            const dateStr = `${now.getMonth() + 1}/${now.getDate()}/${now.getFullYear().toString().slice(-2)}`;
+            
+            // Update any date displays
+            const dateElements = document.querySelectorAll('.info-value');
+            dateElements.forEach(element => {
+                if (element.textContent.includes('{{ current_date }}')) {
+                    element.textContent = dateStr;
+                }
+            });
+        });
+    </script>
 </body>
 </html>

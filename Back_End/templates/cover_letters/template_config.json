@@ -1,0 +1,108 @@
+{
+  "templates": {
+    "general_calc": {
+      "display_name": "General Calculations",
+      "file_name": "2025_Digital_SML_General_Calc_Cover.docx",
+      "template_type": "general_calculations",
+      "required_fields": ["Project", "Location", "Client", "Date", "JobNumber", "By"],
+      "optional_fields": [],
+      "description": "Standard structural calculation cover letter for general projects",
+      "has_engineer_initials": false,
+      "has_checked_by": false,
+      "has_pool_standard": false,
+      "client_format": "name_only",
+      "is_active": true
+    },
+    "pool_standard": {
+      "display_name": "Pool Calculations - Standard",
+      "file_name": "2025 Digital SML Pool Calc Cover-2026 exp.doc",
+      "template_type": "pool_standard",
+      "required_fields": ["Project", "Location", "Client", "ClientAddress", "Date", "JobNumber", "By", "CheckedBy"],
+      "optional_fields": [],
+      "description": "Standard pool structure calculation cover letter",
+      "has_engineer_initials": true,
+      "has_checked_by": true,
+      "has_pool_standard": false,
+      "client_format": "separate_fields",
+      "is_active": true
+    },
+    "pool_revision": {
+      "display_name": "Pool Calculations - Revision",
+      "file_name": "2025_Digital_SML_Pool_Calc_Cover_2026_exp_Revision.docx",
+      "template_type": "pool_revision",
+      "required_fields": ["Project", "Location", "Client", "ClientAddress", "Date", "JobNumber", "By", "CheckedBy"],
+      "optional_fields": [],
+      "description": "Pool calculation cover letter for revisions",
+      "has_engineer_initials": true,
+      "has_checked_by": true,
+      "has_pool_standard": false,
+      "client_format": "separate_fields",
+      "is_active": true
+    },
+    "pool_shasta_supplemental": {
+      "display_name": "Pool Calculations - Shasta Pools SK Supplemental",
+      "file_name": "2025_Digital_SML_Pool_Calc_Cover_2026_exp_Shasta_Pools_SK_Supplemental.docx",
+      "template_type": "pool_shasta_supplemental",
+      "required_fields": ["Standard", "Project", "Location", "Client", "ClientAddress", "Date", "JobNumber", "By", "CheckedBy"],
+      "optional_fields": [],
+      "description": "Pool calculation cover letter for Shasta Pools SK supplemental reports",
+      "has_engineer_initials": true,
+      "has_checked_by": true,
+      "has_pool_standard": true,
+      "client_format": "separate_fields",
+      "is_active": true
+    },
+    "pool_sk_supplemental": {
+      "display_name": "Pool Calculations - SK Supplemental",
+      "file_name": "2025_Digital_SML_Pool_Calc_Cover_2026_exp_SK_Supplemental.docx",
+      "template_type": "pool_sk_supplemental",
+      "required_fields": ["Standard", "Project", "Location", "Client", "ClientAddress", "Date", "JobNumber", "By", "CheckedBy"],
+      "optional_fields": [],
+      "description": "Pool calculation cover letter for SK supplemental reports",
+      "has_engineer_initials": true,
+      "has_checked_by": true,
+      "has_pool_standard": true,
+      "client_format": "separate_fields",
+      "is_active": true
+    },
+    "pool_soils_report": {
+      "display_name": "Pool Calculations - Soils Report",
+      "file_name": "2025_Digital_SML_Pool_Calc_Cover_2026_exp_Soils_Report.docx",
+      "template_type": "pool_soils_report",
+      "required_fields": ["Project", "Location", "Client", "ClientAddress", "Date", "JobNumber", "By", "CheckedBy"],
+      "optional_fields": [],
+      "description": "Pool calculation cover letter for soils reports",
+      "has_engineer_initials": true,
+      "has_checked_by": true,
+      "has_pool_standard": false,
+      "client_format": "separate_fields",
+      "is_active": true
+    },
+    "pool_shasta_standard": {
+      "display_name": "Pool Calculations - Shasta Standard",
+      "file_name": "2025_Digital_SML_Pool_Calc_Cover_Shasta_2026_exp.docx",
+      "template_type": "pool_shasta_standard",
+      "required_fields": ["Project", "Location", "Client", "ClientAddress", "Date", "JobNumber", "By", "CheckedBy"],
+      "optional_fields": [],
+      "description": "Pool calculation cover letter for Shasta standard projects",
+      "has_engineer_initials": true,
+      "has_checked_by": true,
+      "has_pool_standard": false,
+      "client_format": "separate_fields",
+      "is_active": true
+    },
+    "pool_shasta_commercial": {
+      "display_name": "Pool Calculations - Shasta Commercial",
+      "file_name": "2025_Digital_SML_Pool_Calc_Cover_Shasta_Commercial_2026_exp.docx",
+      "template_type": "pool_shasta_commercial",
+      "required_fields": ["Project", "Location", "Client", "ClientAddress", "Date", "JobNumber", "By", "CheckedBy"],
+      "optional_fields": [],
+      "description": "Pool calculation cover letter for Shasta commercial projects",
+      "has_engineer_initials": true,
+      "has_checked_by": true,
+      "has_pool_standard": false,
+      "client_format": "separate_fields",
+      "is_active": true
+    }
+  }
+}
