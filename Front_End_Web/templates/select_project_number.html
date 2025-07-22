@@ -129,7 +129,7 @@
             if (action === 'generate_ahj_report') {
                 form.action = "{{ url_for('ahj.generate_ahj_report') }}";
             } else if (action === 'generate_cover_letter') {
-                form.action = "{{ url_for('cover_letter.generate_cover_letter_route') }}";
+                form.action = "{{ url_for('cover_letter.generate_cover_letter') }}";
             } else if (action === 'generate_asce_summary') {
                 window.location.href = "{{ url_for('asce.generate_asce_summary') }}?project_number=" + projectNumber;
                 return;
