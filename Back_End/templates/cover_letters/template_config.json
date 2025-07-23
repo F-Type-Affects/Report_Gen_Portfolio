@@ -15,7 +15,7 @@
     },
     "pool_standard": {
       "display_name": "Pool Calculations - Standard",
-      "file_name": "2025 Digital SML Pool Calc Cover-2026 exp.doc",
+      "file_name": "2025_Digital_SML_Pool_Calc_Cover_2026_exp.docx",
       "template_type": "pool_standard",
       "required_fields": ["Project", "Location", "Client", "ClientAddress", "Date", "JobNumber", "By", "CheckedBy"],
       "optional_fields": [],
