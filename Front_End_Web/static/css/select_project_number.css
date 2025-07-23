@@ -245,19 +245,20 @@ label {
     color: #a16207;
 }
 
-/* Cover Letter Button - Disabled/Inactive */
+/* Cover Letter Button - Purple Theme */
 .btn-cover {
-    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
-    color: #64748b;
-    border-left: 5px solid #94a3b8;
-    opacity: 0.7;
+    background: linear-gradient(135deg, #faf5ff 0%, #e9d5ff 100%);
+    color: #6d28d9;
+    border-left: 5px solid #7c3aed;
+    opacity: 1;
 }
 
 .btn-cover:hover {
     background: white;
-    border: 2px solid #64748b;
-    color: #64748b;
-    opacity: 1;
+    border: 2px solid #7c3aed;
+    color: #7c3aed;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(124, 58, 237, 0.15);
 }
 
 /* Back Button - Gray */

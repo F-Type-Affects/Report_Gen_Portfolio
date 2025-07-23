@@ -243,16 +243,16 @@ h1 {
     border: 1px solid rgba(161, 98, 7, 0.2);
 }
 
-/* Cover Letter Feature - Neutral */
+/* Cover Letter Feature - Purple */
 .feature-cover {
-    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
-    border-left-color: #64748b;
+    background: linear-gradient(135deg, #faf5ff 0%, #e9d5ff 100%);
+    border-left-color: #7c3aed;
 }
 
 .feature-cover .feature-note {
-    background: rgba(100, 116, 139, 0.1);
-    color: #475569;
-    border: 1px solid rgba(100, 116, 139, 0.2);
+    background: rgba(124, 58, 237, 0.1);
+    color: #6d28d9;
+    border: 1px solid rgba(124, 58, 237, 0.2);
 }
 
 /* Getting Started Section */

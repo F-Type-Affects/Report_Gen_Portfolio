@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Select Cover Letter Template</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/select_coverletter_template.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/flash_message.css') }}">
+</head>
+<body>
+    {% include 'flash_message.html' %}
+    
+    <div class="page-container">
+        <header class="page-header">
+            <h1>Select Cover Letter Template</h1>
+            <div class="project-info">
+                <span><strong>Project:</strong> {{ project_data.name }} ({{ project_data.code }})</span>
+            </div>
+        </header>
+        
+        <div class="main-container">
+                            <form id="templateSelectionForm" method="POST" action="{{ url_for('cover_letter.generate_cover_letter') }}">
+                <!-- Hidden inputs to carry project data -->
+                <input type="hidden" name="project_number" value="{{ project_data.code }}">
+                <input type="hidden" name="template_id" id="selectedTemplateId">
+                <input type="hidden" name="engineer_initials" id="selectedEngineerInitials">
+                <input type="hidden" name="pool_standard" id="selectedPoolStandard">
+                
+                <div class="template-categories">
+                    <!-- General Templates Section -->
+                    <div class="template-category">
+                        <h2 class="category-title">
+                            <span class="category-icon">🏗️</span>
+                            General Engineering Templates
+                        </h2>
+                        <div class="template-grid">
+                            {% for template in templates %}
+                                {% if not template.has_engineer_initials %}
+                                <div class="template-card" data-template-id="{{ template.template_id }}" data-has-initials="false" data-has-pool-standard="{{ template.has_pool_standard|lower }}">
+                                    <div class="template-header">
+                                        <h3>{{ template.display_name }}</h3>
+                                        <span class="template-type">{{ template.template_type.replace('_', ' ').title() }}</span>
+                                    </div>
+                                    <div class="template-description">
+                                        <p>{{ template.description }}</p>
+                                    </div>
+                                    <div class="template-details">
+                                        <div class="detail-item">
+                                            <span class="detail-label">Client Format:</span>
+                                            <span class="detail-value">{{ 'Name Only' if template.client_format == 'name_only' else 'Name + Address' }}</span>
+                                        </div>
+                                        <div class="detail-item">
+                                            <span class="detail-label">By Field:</span>
+                                            <span class="detail-value">Full Name</span>
+                                        </div>
+                                    </div>
+                                    <button type="button" class="select-template-btn" onclick="selectTemplate('{{ template.template_id }}', false, {% if template.has_pool_standard %}true{% else %}false{% endif %})">
+                                        Select Template
+                                    </button>
+                                </div>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                    </div>
+                    
+                    <!-- Pool Templates Section -->
+                    <div class="template-category">
+                        <h2 class="category-title">
+                            <span class="category-icon">🏊‍♂️</span>
+                            Pool Engineering Templates
+                        </h2>
+                        <div class="template-grid">
+                            {% for template in templates %}
+                                {% if template.has_engineer_initials %}
+                                <div class="template-card" data-template-id="{{ template.template_id }}" data-has-initials="true" data-has-pool-standard="{{ template.has_pool_standard|lower }}">
+                                    <div class="template-header">
+                                        <h3>{{ template.display_name }}</h3>
+                                        <span class="template-type">{{ template.template_type.replace('_', ' ').title() }}</span>
+                                    </div>
+                                    <div class="template-description">
+                                        <p>{{ template.description }}</p>
+                                    </div>
+                                    <div class="template-details">
+                                        <div class="detail-item">
+                                            <span class="detail-label">Client Format:</span>
+                                            <span class="detail-value">{{ 'Name Only' if template.client_format == 'name_only' else 'Name + Address' }}</span>
+                                        </div>
+                                        <div class="detail-item">
+                                            <span class="detail-label">By Field:</span>
+                                            <span class="detail-value">Engineer Initials</span>
+                                        </div>
+                                        <div class="detail-item">
+                                            <span class="detail-label">Checked By:</span>
+                                            <span class="detail-value">J. Light, SE</span>
+                                        </div>
+                                    </div>
+                                    <button type="button" class="select-template-btn" onclick="selectTemplate('{{ template.template_id }}', true, {% if template.has_pool_standard %}true{% else %}false{% endif %})">
+                                        Select Template
+                                    </button>
+                                </div>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Pool Standard Selection Modal -->
+                <div id="poolStandardModal" class="modal" style="display: none;">
+                    <div class="modal-content">
+                        <h3>Select Pool Standard</h3>
+                        <p>Please select the pool standard for this template:</p>
+                        <div class="standard-options">
+                            {% for option in pool_standard_options %}
+                            <label class="standard-option">
+                                <input type="radio" name="standard_choice" value="{{ option.value }}">
+                                <span class="standard-label">{{ option.display }}</span>
+                            </label>
+                            {% endfor %}
+                        </div>
+                        <div class="modal-actions">
+                            <button type="button" onclick="confirmPoolStandard()" class="btn btn-primary">Confirm</button>
+                            <button type="button" onclick="closePoolStandardModal()" class="btn btn-secondary">Cancel</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Engineer Initials Selection Modal -->
+                <div id="initialsModal" class="modal" style="display: none;">
+                    <div class="modal-content">
+                        <h3>Select Engineer Initials</h3>
+                        <p>Please select the engineer initials for this pool template:</p>
+                        <div class="initials-options">
+                            {% for option in engineer_initials_options %}
+                            <label class="initials-option">
+                                <input type="radio" name="initials_choice" value="{{ option.value }}">
+                                <span class="initials-label">{{ option.display }}</span>
+                            </label>
+                            {% endfor %}
+                        </div>
+                        <div class="modal-actions">
+                            <button type="button" onclick="confirmInitials()" class="btn btn-primary">Confirm</button>
+                            <button type="button" onclick="closeModal()" class="btn btn-secondary">Cancel</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Navigation Buttons -->
+                <div class="navigation-buttons">
+                    <button type="button" onclick="window.location.href='{{ url_for('project.fetch_project_number_get') }}'" class="btn btn-secondary">
+                        ← Back to Project Selection
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <script>
+        let selectedTemplateId = null;
+        let requiresInitials = false;
+        let requiresPoolStandard = false;
+        
+        function selectTemplate(templateId, hasInitials, hasPoolStandard) {
+            selectedTemplateId = templateId;
+            requiresInitials = hasInitials;
+            requiresPoolStandard = hasPoolStandard;
+            
+            // Clear previous selections
+            document.querySelectorAll('.template-card').forEach(card => {
+                card.classList.remove('selected');
+            });
+            
+            // Mark selected template
+            document.querySelector(`[data-template-id="${templateId}"]`).classList.add('selected');
+            
+            // Handle selection flow: Pool Standard first, then Engineer Initials
+            if (hasPoolStandard === true) {
+                // Show pool standard modal first
+                document.getElementById('poolStandardModal').style.display = 'block';
+                // Ensure page is scrolled to top when modal opens
+                window.scrollTo(0, 0);
+                // Focus on modal for accessibility
+                document.querySelector('#poolStandardModal .modal-content').focus();
+            } else if (hasInitials) {
+                // Show engineer initials modal for pool templates (without pool standard)
+                document.getElementById('initialsModal').style.display = 'block';
+                // Ensure page is scrolled to top when modal opens
+                window.scrollTo(0, 0);
+                // Focus on modal for accessibility
+                document.querySelector('#initialsModal .modal-content').focus();
+            } else {
+                // Proceed directly for general templates
+                proceedWithTemplate();
+            }
+        }
+        
+        function confirmInitials() {
+            const selectedInitials = document.querySelector('input[name="initials_choice"]:checked');
+            if (!selectedInitials) {
+                alert('Please select engineer initials.');
+                return;
+            }
+            
+            document.getElementById('selectedEngineerInitials').value = selectedInitials.value;
+            closeModal();
+            proceedWithTemplate();
+        }
+        
+        function proceedWithTemplate() {
+            if (!selectedTemplateId) {
+                alert('Please select a template.');
+                return;
+            }
+            
+            // Set the selected template ID
+            document.getElementById('selectedTemplateId').value = selectedTemplateId;
+            
+            // Submit the form
+            document.getElementById('templateSelectionForm').submit();
+        }
+        
+        function closeModal() {
+            document.getElementById('initialsModal').style.display = 'none';
+            // Clear radio button selections
+            document.querySelectorAll('input[name="initials_choice"]').forEach(radio => {
+                radio.checked = false;
+            });
+        }
+        
+        function confirmPoolStandard() {
+            const selectedStandard = document.querySelector('input[name="standard_choice"]:checked');
+            if (!selectedStandard) {
+                alert('Please select a pool standard.');
+                return;
+            }
+            
+            document.getElementById('selectedPoolStandard').value = selectedStandard.value;
+            closePoolStandardModal();
+            
+            // After pool standard selection, show engineer initials if needed
+            if (requiresInitials) {
+                document.getElementById('initialsModal').style.display = 'block';
+                // Ensure page is scrolled to top when modal opens
+                window.scrollTo(0, 0);
+                // Focus on modal for accessibility
+                document.querySelector('#initialsModal .modal-content').focus();
+            } else {
+                // Proceed directly if no initials needed
+                proceedWithTemplate();
+            }
+        }
+        
+        function closePoolStandardModal() {
+            document.getElementById('poolStandardModal').style.display = 'none';
+            // Clear radio button selections
+            document.querySelectorAll('input[name="standard_choice"]').forEach(radio => {
+                radio.checked = false;
+            });
+        }
+        
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const initialsModal = document.getElementById('initialsModal');
+            const poolStandardModal = document.getElementById('poolStandardModal');
+            if (event.target == initialsModal) {
+                closeModal();
+            }
+            if (event.target == poolStandardModal) {
+                closePoolStandardModal();
+            }
+        }
+    </script>
+</body>
+</html>
