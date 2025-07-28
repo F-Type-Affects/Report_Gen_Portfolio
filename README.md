@@ -6,9 +6,11 @@ It combines this data with Authority Having Jurisdiction (AHJ) information colle
 It also automates, via web scraping, the collection of ASCE (American Society of Civil Engineers) Hazard Data (Wind, Snow, Ice, & Seismic) in two ways:
 1. Scraping the ACSE Summary Table data and appending it to the AHJ Report.
 2. Scraping the full ASCE Hazard Report and saving it to the project_info/ASCE_Hazard_Report directory.
+   
 It also automates, via web scraping, the generation of two different USDA Soil Reports:
 1. Linear Extensability Report
 2. Unified Soil Classification Report
+
 Finally it can generate 8 different calculation package cover letters. One template is for general projects and the other seven templates are for various pool projects.
 
 The application can also generate all of the reports for the user at once following the Unified Web Scraping Process.
@@ -187,6 +189,7 @@ The application seamlessly integrates with:
 ## Application Structure
 
 ### Project Structure:
+```
 .
 └── SML_Reports_Test/
     ├── Back_End/
@@ -274,6 +277,7 @@ The application seamlessly integrates with:
     ├── gunicorn.log
     ├── requirements.txt
     └── __init__.py
+```
 
 ### Front-End (What You See)
 ```
