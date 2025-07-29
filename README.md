@@ -1,5 +1,9 @@
 # SML Reports Generation Application
 
+## ⚠️ Important Note for Reviewers
+
+This application is deeply integrated with proprietary systems and APIs (BQE CORE, internal network drives, and third-party engineering tools). As such, it cannot be run or demonstrated without access to these systems and proper credentials. The code is presented here to showcase the technical implementation, architecture, and problem-solving approaches used in a production enterprise environment.
+
 ## Overview
 The SML Report Generator is a web based application that automates the creation of various reports and documentation for any project in the company. It collects Project & Client data from the BQE Core Platform.
 It combines this data with Authority Having Jurisdiction (AHJ) information collected via web scraping to create an AHJ Report for a given project. 
@@ -324,7 +328,7 @@ Back_End/
 ### For Daily Use (Production Server)
 The application runs continuously on the company server. Simply navigate to:
 ```
-http://192.168.0.88
+http://server-ip
 ```
 
 ### For Development/Testing
@@ -559,7 +563,7 @@ All Python packages are listed in `requirements.txt`:
 
 For technical issues or questions about the application:
 - **Developer**: Frank Stranathan
-- **Email**: fstranathan@smleng.com
+- **Email**: fstranathan@gmail.com
 
 For BQE CORE access issues:
 - Contact your BQE CORE administrator
