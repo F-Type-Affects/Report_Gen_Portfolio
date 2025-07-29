@@ -2,7 +2,7 @@
 
 ## ⚠️ Important Note for Reviewers
 
-This application is deeply integrated with proprietary systems and APIs (BQE CORE, internal network drives, and third-party engineering tools). As such, it cannot be run or demonstrated without access to these systems and proper credentials. The code is presented here to showcase the technical implementation, architecture, and problem-solving approaches used in a production enterprise environment.
+The functionality of this web application is deeply integrated with proprietary project and client information on the BQE Core Platform along with personably identifiable information of the companies employees. I have sanatized the code base of this information so none of the application will not work. I am working on updating this version to use dummy data and services when convient but this is mainly to verify projects listed on my CV. While I did utalize generative A.I on this project I am the sole developer on the project which includes configuring the server enviornment.
 
 ## Overview
 The SML Report Generator is a web based application that automates the creation of various reports and documentation for any project in the company. It collects Project & Client data from the BQE Core Platform.
